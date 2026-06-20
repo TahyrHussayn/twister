@@ -7,9 +7,10 @@
     "dev": "react-router dev",
     "typecheck": "wrangler types && react-router typegen && tsc -b",
     "deploy": "pnpm run build && wrangler deploy",
-    "preview": "pnpm run build && vite preview",
+    "preview": "pnpm run build && vp preview",
     "cf-typegen": "wrangler types",
-    "postinstall": "wrangler types"
+    "postinstall": "wrangler types",
+    "prepare": "vp config || true"
   },
   "dependencies": {
     "isbot": "^5.1.36",
@@ -26,8 +27,9 @@
     "@types/react-dom": "^19.2.3",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.3",
-    "vite": "^8.0.0",
-    "vite-tsconfig-paths": "^6.1.1",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "@voidzero-dev/vite-plus-linux-x64-gnu": "0.2.1",
     "wrangler": "^4.102.0"
   },
   "devEngines": {

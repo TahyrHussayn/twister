@@ -32,11 +32,5 @@
     "@voidzero-dev/vite-plus-linux-x64-gnu": "0.2.1",
     "wrangler": "^4.102.0"
   },
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "11.8.0",
-      "onFail": "download"
-    }
-  }
+  "packageManager": "pnpm@11.8.0"
 }

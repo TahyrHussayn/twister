@@ -10,7 +10,7 @@
     "preview": "pnpm run build && vp preview",
     "cf-typegen": "wrangler types",
     "postinstall": "wrangler types",
-    "prepare": "vp config"
+    "prepare": "vp config || true"
   },
   "dependencies": {
     "isbot": "^5.1.36",

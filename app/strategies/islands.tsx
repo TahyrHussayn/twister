@@ -59,8 +59,8 @@ export default function Islands({ loaderData }: Route.ComponentProps) {
         <Suspense fallback={<SpinnerShell title="Search" />}>
           <SearchIsland />
         </Suspense>
-        <Suspense fallback={<SpinnerShell title="Theme" />}>
-          <ThemeIsland />
+        <Suspense fallback={<SpinnerShell title="Tabs" />}>
+          <TabsIsland />
         </Suspense>
       </div>
 
@@ -237,30 +237,29 @@ function SearchIsland() {
   );
 }
 
-function ThemeIsland() {
-  const [dark, setDark] = useState(false);
-  useEffect(() => {
-    setDark(document.documentElement.classList.contains("dark"));
-  }, []);
-  const toggle = () => {
-    setDark((d) => {
-      const n = !d;
-      document.documentElement.classList.toggle("dark", n);
-      return n;
-    });
-  };
+function TabsIsland() {
+  const [tab, setTab] = useState(0);
+  const items = ["Edge SSR", "Streaming", "ISR", "PPR"];
   return (
-    <div className="rounded-xl border border-teal-200 dark:border-teal-800 bg-white dark:bg-zinc-900 p-5 text-center card-hover">
+    <div className="rounded-xl border border-teal-200 dark:border-teal-800 bg-white dark:bg-zinc-900 p-5 card-hover">
       <p className="text-[10px] font-semibold text-teal-600 dark:text-teal-400 mb-3 uppercase tracking-wider">
-        🏝️ Theme Toggle
+        🏝️ Tabs
       </p>
-      <button
-        type="button"
-        onClick={toggle}
-        className="px-4 py-2 rounded-lg bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-medium hover:opacity-80 transition-opacity"
-      >
-        {dark ? "☀️ Light" : "🌙 Dark"}
-      </button>
+      <div className="flex gap-1 mb-3">
+        {items.map((item, i) => (
+          <button
+            key={item}
+            type="button"
+            onClick={() => setTab(i)}
+            className={`px-3 py-1 rounded text-[10px] font-medium transition-colors ${i === tab ? "bg-teal-600 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"}`}
+          >
+            {item}
+          </button>
+        ))}
+      </div>
+      <p className="text-xs text-zinc-600 dark:text-zinc-400">
+        {items[tab]} is a rendering strategy.
+      </p>
     </div>
   );
 }

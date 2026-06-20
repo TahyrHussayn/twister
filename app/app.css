@@ -11,6 +11,12 @@
 html {
   scroll-behavior: smooth;
 }
+html.transitioning * {
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
+}
 body {
   @apply bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 antialiased;
   @media (prefers-color-scheme: dark) {

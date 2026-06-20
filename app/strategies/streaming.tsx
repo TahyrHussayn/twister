@@ -44,17 +44,41 @@ export default function Streaming({ loaderData }: Route.ComponentProps) {
   return (
     <StrategyPage
       strategy="streaming"
-      emoji="🌊"
       title="Streaming SSR"
       metrics={metrics}
       description="HTML streams progressively. Each section resolves independently — the shell renders instantly and data flows in as each promise resolves. No single slow query blocks the entire page."
     >
+      <SectionDivider label="Request Lifecycle" />
+
+      {/* Flow Diagram */}
+      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 p-8 rounded-2xl border border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-[#050505]">
+        <div className="flow-step">
+          <span className="text-lg">📱</span>
+          <span>Client Request</span>
+        </div>
+        <div className="flow-arrow active">→</div>
+        <div className="flow-step active">
+          <span className="text-lg">🦴</span>
+          <span>Shell Sent</span>
+        </div>
+        <div className="flow-arrow active">→</div>
+        <div className="flow-step active">
+          <span className="text-lg">🌊</span>
+          <span>Data Streams</span>
+        </div>
+        <div className="flow-arrow active">→</div>
+        <div className="flow-step active">
+          <span className="text-lg">✨</span>
+          <span>Progressive Render</span>
+        </div>
+      </div>
+
       <SectionDivider label="How it works" />
       <CodeSnippet code={CODE} filename="app/strategies/streaming.tsx" strategy="Streaming" />
 
       <SectionDivider label="Live demo" />
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-2">
         <Suspense fallback={<CardSkeleton />}>
           <ProfileSection promise={profile} />
         </Suspense>
@@ -62,22 +86,32 @@ export default function Streaming({ loaderData }: Route.ComponentProps) {
           <AnalyticsSection promise={analytics} />
         </Suspense>
       </div>
-      <Suspense fallback={<CardSkeleton />}>
-        <RecsSection promise={recommendations} />
-      </Suspense>
-      <Suspense
-        fallback={
-          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
-            <h2 className="font-semibold text-sm mb-4">Activity Feed</h2>
-            <TextSkeleton lines={5} />
-          </div>
-        }
-      >
-        <ActivitySection promise={activities} />
-      </Suspense>
+      <div className="mt-6">
+        <Suspense fallback={<CardSkeleton />}>
+          <RecsSection promise={recommendations} />
+        </Suspense>
+      </div>
+      <div className="mt-6">
+        <Suspense
+          fallback={
+            <div className="rounded-2xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-[#050505] p-6 shadow-sm">
+              <h2 className="font-bold text-sm mb-5 text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ backgroundColor: "var(--s-accent)" }}
+                />
+                Activity Feed
+              </h2>
+              <TextSkeleton lines={5} />
+            </div>
+          }
+        >
+          <ActivitySection promise={activities} />
+        </Suspense>
+      </div>
 
-      <p className="text-center text-[11px] font-mono text-zinc-400">
-        Shell rendered at edge: {timestamp}
+      <p className="text-center text-[11px] font-mono font-medium text-zinc-500 py-6">
+        Shell rendered at edge: <span style={{ color: "var(--s-text)" }}>{timestamp}</span>
       </p>
 
       <SectionDivider label="When to use it" />
@@ -85,9 +119,9 @@ export default function Streaming({ loaderData }: Route.ComponentProps) {
         pros={["No data waterfalls", "Great perceived performance", "Critical content first"]}
         cons={["More complex to build", "Requires Suspense", "Not all frameworks support it"]}
         related={[
-          { to: "/ssr", label: "SSR", emoji: "⚡" },
-          { to: "/ppr", label: "PPR", emoji: "🧩" },
-          { to: "/islands", label: "Islands", emoji: "🏝️" },
+          { to: "/ssr", label: "SSR", key: "SSR" },
+          { to: "/ppr", label: "PPR", key: "PPR" },
+          { to: "/islands", label: "Islands", key: "Islands" },
         ]}
       />
     </StrategyPage>
@@ -97,16 +131,37 @@ export default function Streaming({ loaderData }: Route.ComponentProps) {
 function ProfileSection({ promise }: { promise: ReturnType<typeof fetchUserProfile> }) {
   const p = use(promise);
   return (
-    <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 card-hover">
-      <h2 className="font-semibold text-sm mb-4">User Profile</h2>
-      <div className="flex items-center gap-4">
-        <img src={p.avatar} alt={p.name} className="w-12 h-12 rounded-full" />
+    <section
+      className="relative overflow-hidden rounded-2xl border bg-white dark:bg-[#050505] p-6 shadow-sm transition-shadow hover:shadow-md animate-in fade-in zoom-in-95 duration-500"
+      style={{ borderColor: "var(--s-border)" }}
+    >
+      <div className="absolute top-0 right-0 p-4 opacity-10">
+        <span className="text-6xl text-cyan-500">👤</span>
+      </div>
+      <h2 className="font-bold text-sm mb-5 text-zinc-900 dark:text-zinc-100 flex items-center gap-2 relative z-10">
+        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--s-accent)" }} />
+        User Profile
+      </h2>
+      <div className="flex items-center gap-5 relative z-10">
+        <img
+          src={p.avatar}
+          alt={p.name}
+          className="w-14 h-14 rounded-full ring-2 ring-white dark:ring-zinc-900 shadow-sm"
+        />
         <div>
-          <p className="font-semibold">{p.name}</p>
-          <p className="text-xs text-zinc-500">{p.email}</p>
+          <p className="font-bold text-zinc-900 dark:text-zinc-100">{p.name}</p>
+          <p className="text-sm text-zinc-500">{p.email}</p>
         </div>
       </div>
-      <p className="text-[10px] text-cyan-500 mt-3">Resolved after 500ms</p>
+      <div className="mt-5 pt-3 border-t border-zinc-100 dark:border-zinc-800/50">
+        <p
+          className="text-[10px] font-bold tracking-wider uppercase flex items-center gap-1.5"
+          style={{ color: "var(--s-accent)" }}
+        >
+          <span className="w-1 h-1 rounded-full animate-pulse bg-current" />
+          Resolved after 500ms
+        </p>
+      </div>
     </section>
   );
 }
@@ -114,27 +169,60 @@ function ProfileSection({ promise }: { promise: ReturnType<typeof fetchUserProfi
 function AnalyticsSection({ promise }: { promise: ReturnType<typeof fetchAnalytics> }) {
   const a = use(promise);
   return (
-    <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 card-hover">
-      <h2 className="font-semibold text-sm mb-4">Analytics</h2>
-      <div className="grid grid-cols-2 gap-4">
+    <section
+      className="relative overflow-hidden rounded-2xl border bg-white dark:bg-[#050505] p-6 shadow-sm transition-shadow hover:shadow-md animate-in fade-in zoom-in-95 duration-500"
+      style={{ borderColor: "var(--s-border)" }}
+    >
+      <h2 className="font-bold text-sm mb-5 text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--s-accent)" }} />
+        Analytics
+      </h2>
+      <div className="grid grid-cols-2 gap-y-5 gap-x-4">
         <div>
-          <p className="text-[10px] text-zinc-400 uppercase tracking-wider">Page Views</p>
-          <p className="text-xl font-bold font-mono">{a.pageViews.toLocaleString()}</p>
+          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+            Page Views
+          </p>
+          <p
+            className="text-2xl font-bold font-mono tracking-tight"
+            style={{ color: "var(--s-text)" }}
+          >
+            {a.pageViews.toLocaleString()}
+          </p>
         </div>
         <div>
-          <p className="text-[10px] text-zinc-400 uppercase tracking-wider">Visitors</p>
-          <p className="text-xl font-bold font-mono">{a.uniqueVisitors.toLocaleString()}</p>
+          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+            Visitors
+          </p>
+          <p className="text-2xl font-bold font-mono tracking-tight text-zinc-900 dark:text-zinc-100">
+            {a.uniqueVisitors.toLocaleString()}
+          </p>
         </div>
         <div>
-          <p className="text-[10px] text-zinc-400 uppercase tracking-wider">Avg Session</p>
-          <p className="text-xl font-bold font-mono">{a.avgSessionDuration}s</p>
+          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+            Avg Session
+          </p>
+          <p className="text-xl font-bold font-mono text-zinc-700 dark:text-zinc-300">
+            {a.avgSessionDuration}s
+          </p>
         </div>
         <div>
-          <p className="text-[10px] text-zinc-400 uppercase tracking-wider">Bounce</p>
-          <p className="text-xl font-bold font-mono">{(a.bounceRate * 100).toFixed(0)}%</p>
+          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+            Bounce Rate
+          </p>
+          <p className="text-xl font-bold font-mono text-zinc-700 dark:text-zinc-300">
+            {(a.bounceRate * 100).toFixed(0)}%
+          </p>
         </div>
       </div>
-      <p className="text-[10px] text-cyan-500 mt-3">Resolved after 1s</p>
+      <div className="mt-5 pt-3 border-t border-zinc-100 dark:border-zinc-800/50">
+        <p
+          className="text-[10px] font-bold tracking-wider uppercase flex items-center gap-1.5"
+          style={{ color: "var(--s-accent)" }}
+        >
+          <span className="w-1 h-1 rounded-full animate-pulse bg-current" />
+          Resolved after 1.0s
+        </p>
+      </div>
     </section>
   );
 }
@@ -142,22 +230,46 @@ function AnalyticsSection({ promise }: { promise: ReturnType<typeof fetchAnalyti
 function RecsSection({ promise }: { promise: ReturnType<typeof fetchRecommendations> }) {
   const r = use(promise);
   return (
-    <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 card-hover">
-      <h2 className="font-semibold text-sm mb-4">Recommendations</h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <section
+      className="relative overflow-hidden rounded-2xl border bg-white dark:bg-[#050505] p-6 shadow-sm transition-shadow hover:shadow-md animate-in fade-in zoom-in-95 duration-500"
+      style={{ borderColor: "var(--s-border)" }}
+    >
+      <h2 className="font-bold text-sm mb-5 text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--s-accent)" }} />
+        Recommendations
+      </h2>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {r.map((rec) => (
-          <div key={rec.id} className="rounded-lg border border-zinc-100 dark:border-zinc-800 p-3">
-            <p className="font-medium text-xs">{rec.title}</p>
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-[10px] text-zinc-400">{rec.category}</span>
-              <span className="text-[10px] font-mono font-bold text-cyan-600 dark:text-cyan-400">
+          <div
+            key={rec.id}
+            className="rounded-xl border border-zinc-200/60 dark:border-white/5 bg-zinc-50/50 dark:bg-white/[0.02] p-4 transition-colors hover:bg-zinc-100/50 dark:hover:bg-white/[0.04]"
+          >
+            <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 mb-2 leading-snug">
+              {rec.title}
+            </p>
+            <div className="flex items-center justify-between mt-auto">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                {rec.category}
+              </span>
+              <span
+                className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-md"
+                style={{ color: "var(--s-text)", backgroundColor: "var(--s-bg)" }}
+              >
                 {(rec.score * 100).toFixed(0)}%
               </span>
             </div>
           </div>
         ))}
       </div>
-      <p className="text-[10px] text-cyan-500 mt-3">Resolved after 1.8s</p>
+      <div className="mt-5 pt-3 border-t border-zinc-100 dark:border-zinc-800/50">
+        <p
+          className="text-[10px] font-bold tracking-wider uppercase flex items-center gap-1.5"
+          style={{ color: "var(--s-accent)" }}
+        >
+          <span className="w-1 h-1 rounded-full animate-pulse bg-current" />
+          Resolved after 1.8s
+        </p>
+      </div>
     </section>
   );
 }
@@ -165,22 +277,41 @@ function RecsSection({ promise }: { promise: ReturnType<typeof fetchRecommendati
 function ActivitySection({ promise }: { promise: ReturnType<typeof fetchActivityFeed> }) {
   const acts = use(promise);
   return (
-    <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
-      <h2 className="font-semibold text-sm mb-4">Activity Feed</h2>
-      <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+    <section className="rounded-2xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-[#050505] p-6 shadow-sm animate-in fade-in zoom-in-95 duration-500">
+      <h2 className="font-bold text-sm mb-5 flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--s-accent)" }} />
+        Activity Feed
+      </h2>
+      <div className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
         {acts.map((a) => (
-          <div key={a.id} className="flex items-center justify-between py-3 text-sm">
-            <div>
-              <span className="font-medium">{a.action}</span>{" "}
-              <span className="text-zinc-500">{a.target}</span>
+          <div
+            key={a.id}
+            className="flex items-center justify-between py-3.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900/50 px-2 -mx-2 rounded-lg transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <span className="w-8 h-8 rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-zinc-600 dark:text-zinc-400">
+                {a.action.charAt(0)}
+              </span>
+              <div>
+                <span className="font-semibold text-zinc-900 dark:text-zinc-100">{a.action}</span>{" "}
+                <span className="text-zinc-500">{a.target}</span>
+              </div>
             </div>
-            <time className="text-[11px] font-mono text-zinc-400">
+            <time className="text-[11px] font-mono text-zinc-400 bg-zinc-100 dark:bg-zinc-800/50 px-2 py-1 rounded">
               {new Date(a.timestamp).toLocaleTimeString()}
             </time>
           </div>
         ))}
       </div>
-      <p className="text-[10px] text-cyan-500 mt-3">Resolved after 2.5s</p>
+      <div className="mt-5 pt-3 border-t border-zinc-100 dark:border-zinc-800/50">
+        <p
+          className="text-[10px] font-bold tracking-wider uppercase flex items-center gap-1.5"
+          style={{ color: "var(--s-accent)" }}
+        >
+          <span className="w-1 h-1 rounded-full animate-pulse bg-current" />
+          Resolved after 2.5s
+        </p>
+      </div>
     </section>
   );
 }

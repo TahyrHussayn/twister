@@ -54,7 +54,6 @@ export default function ISR({ loaderData }: Route.ComponentProps) {
   return (
     <StrategyPage
       strategy="isr"
-      emoji="🔄"
       title="Incremental Static Regeneration"
       metrics={
         cacheStatus === "HIT"
@@ -66,15 +65,23 @@ export default function ISR({ loaderData }: Route.ComponentProps) {
         <>
           Uses Cloudflare's{" "}
           <code
-            className="px-1 py-0.5 rounded text-xs font-mono"
-            style={{ backgroundColor: "var(--s-bg)", color: "var(--s-text)" }}
+            className="px-1.5 py-0.5 rounded font-mono text-[11px] border"
+            style={{
+              backgroundColor: "var(--s-bg)",
+              color: "var(--s-text)",
+              borderColor: "var(--s-border)",
+            }}
           >
             Cache API
           </code>
           . First visit fetches from{" "}
           <code
-            className="px-1 py-0.5 rounded text-xs font-mono"
-            style={{ backgroundColor: "var(--s-bg)", color: "var(--s-text)" }}
+            className="px-1.5 py-0.5 rounded font-mono text-[11px] border"
+            style={{
+              backgroundColor: "var(--s-bg)",
+              color: "var(--s-text)",
+              borderColor: "var(--s-border)",
+            }}
           >
             fakestoreapi.com
           </code>{" "}
@@ -83,94 +90,187 @@ export default function ISR({ loaderData }: Route.ComponentProps) {
         </>
       }
     >
+      <SectionDivider label="Request Lifecycle" />
+
+      {/* Flow Diagram */}
+      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 p-8 rounded-2xl border border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-[#050505]">
+        <div className="flow-step">
+          <span className="text-lg">📱</span>
+          <span>First Request</span>
+        </div>
+        <div className="flow-arrow active">→</div>
+        <div className="flow-step active">
+          <span className="text-lg">⚙️</span>
+          <span>Server Renders</span>
+        </div>
+        <div className="flow-arrow active">→</div>
+        <div className="flow-step active">
+          <span className="text-lg">💾</span>
+          <span>Cache Stores</span>
+        </div>
+        <div className="flow-arrow active">→</div>
+        <div className="flow-step active">
+          <span className="text-lg">⚡</span>
+          <span>Subsequent: Cache HIT</span>
+        </div>
+      </div>
+
       <SectionDivider label="How it works" />
       <CodeSnippet code={ISR_CODE} filename="app/strategies/isr.tsx" strategy="ISR" />
 
       <SectionDivider label="Cache controls" />
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-3">
         <form
           method="post"
           action="/api/purge"
-          className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4"
+          className="rounded-2xl border bg-white dark:bg-[#050505] p-6 shadow-sm relative overflow-hidden"
+          style={{ borderColor: "var(--s-border)" }}
         >
-          <p className="text-xs font-semibold mb-2" style={{ color: "var(--s-text)" }}>
+          <div
+            className="absolute top-0 left-0 w-full h-1 opacity-20"
+            style={{ backgroundColor: "var(--s-accent)" }}
+          />
+          <p className="text-sm font-bold mb-4 flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ backgroundColor: "var(--s-accent)" }}
+            />
             Purge Cache
           </p>
           <input type="hidden" name="url" value="/isr" />
           <input type="hidden" name="redirect" value="/isr" />
           <button
             type="submit"
-            className="w-full px-4 py-2 rounded-lg text-white text-xs font-medium transition-colors hover:opacity-90"
+            className="w-full px-4 py-2.5 rounded-xl text-white text-xs font-bold transition-transform hover:scale-105 active:scale-95 shadow-sm"
             style={{ backgroundColor: "var(--s-accent)" }}
           >
             Purge /isr
           </button>
-          <p className="text-[10px] text-zinc-400 mt-2">
-            Clears CDN cache. Refresh after purging to see a MISS.
+          <p className="text-[10px] text-zinc-500 mt-4 leading-relaxed font-medium">
+            Clears CDN cache. Refresh after purging to see a{" "}
+            <span className="text-rose-500 font-bold">MISS</span>.
           </p>
         </form>
-        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
-          <p className="text-xs font-semibold mb-2">Cache Behavior</p>
-          <div className="space-y-1 text-[11px]">
-            <div className="flex justify-between">
+
+        <div
+          className="rounded-2xl border bg-white dark:bg-[#050505] p-6 shadow-sm relative overflow-hidden"
+          style={{ borderColor: "var(--s-border)" }}
+        >
+          <div
+            className="absolute top-0 left-0 w-full h-1 opacity-20"
+            style={{ backgroundColor: "var(--s-accent)" }}
+          />
+          <p className="text-sm font-bold mb-4 flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ backgroundColor: "var(--s-accent)" }}
+            />
+            Behavior
+          </p>
+          <div className="space-y-3 text-xs font-medium">
+            <div className="flex justify-between items-center pb-2 border-b border-zinc-100 dark:border-zinc-800/50">
               <span className="text-zinc-500">Cache-Tag</span>
-              <code className="font-mono text-blue-600 dark:text-blue-400">isr-products</code>
+              <code className="font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded">
+                isr-products
+              </code>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center pb-2 border-b border-zinc-100 dark:border-zinc-800/50">
               <span className="text-zinc-500">max-age</span>
-              <code className="font-mono text-emerald-600 dark:text-emerald-400">60s</code>
+              <code className="font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded">
+                60s
+              </code>
             </div>
-            <div className="flex justify-between">
-              <span className="text-zinc-500">stale-while-revalidate</span>
-              <code className="font-mono" style={{ color: "var(--s-text)" }}>
+            <div className="flex justify-between items-center pb-2 border-b border-zinc-100 dark:border-zinc-800/50">
+              <span className="text-zinc-500">SWR</span>
+              <code
+                className="font-mono font-bold px-1.5 py-0.5 rounded"
+                style={{ color: "var(--s-text)", backgroundColor: "var(--s-bg)" }}
+              >
                 3600s
               </code>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span className="text-zinc-500">Status</span>
-              <code className="font-mono">{cacheStatus}</code>
+              <code
+                className={`font-mono font-bold px-1.5 py-0.5 rounded ${cacheStatus === "HIT" ? "text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/20" : "text-rose-600 bg-rose-50 dark:text-rose-400 dark:bg-rose-900/20"}`}
+              >
+                {cacheStatus}
+              </code>
             </div>
           </div>
         </div>
-        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
-          <p className="text-xs font-semibold mb-2">Test It</p>
+
+        <div
+          className="rounded-2xl border bg-white dark:bg-[#050505] p-6 shadow-sm relative overflow-hidden"
+          style={{ borderColor: "var(--s-border)" }}
+        >
+          <div
+            className="absolute top-0 left-0 w-full h-1 opacity-20"
+            style={{ backgroundColor: "var(--s-accent)" }}
+          />
+          <p className="text-sm font-bold mb-4 flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ backgroundColor: "var(--s-accent)" }}
+            />
+            Test It
+          </p>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="w-full px-4 py-2 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-medium hover:opacity-90 transition-opacity"
+            className="w-full px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold hover:scale-105 active:scale-95 transition-transform shadow-sm"
           >
             Refresh Page
           </button>
-          <p className="text-[10px] text-zinc-400 mt-2">
-            First load: MISS + slow. Second load: HIT + fast. Purge then refresh: MISS again.
+          <p className="text-[10px] text-zinc-500 mt-4 leading-relaxed font-medium">
+            First load: <span className="text-rose-500 font-bold">MISS</span> + slow. Second load:{" "}
+            <span className="text-emerald-500 font-bold">HIT</span> + fast.
           </p>
         </div>
       </div>
 
       <SectionDivider label="Live demo" />
-      <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
+      <section
+        className="rounded-2xl border bg-white dark:bg-[#050505] overflow-hidden shadow-sm"
+        style={{ borderColor: "var(--s-border)" }}
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-zinc-50 dark:bg-zinc-800/50">
-                <th className="px-5 py-3 text-left text-xs font-semibold">Product</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold">Category</th>
-                <th className="px-5 py-3 text-right text-xs font-semibold">Price</th>
-                <th className="px-5 py-3 text-center text-xs font-semibold">Status</th>
+              <tr
+                className="border-b"
+                style={{ backgroundColor: "var(--s-bg)", borderColor: "var(--s-border)" }}
+              >
+                <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                  Product
+                </th>
+                <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                  Category
+                </th>
+                <th className="px-5 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                  Price
+                </th>
+                <th className="px-5 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                  Status
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
               {products.map((p) => (
                 <tr
                   key={p.id}
-                  className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                  className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors"
                 >
-                  <td className="px-5 py-3 font-medium text-xs max-w-[200px] truncate">{p.name}</td>
-                  <td className="px-5 py-3 text-xs text-zinc-500">{p.category}</td>
-                  <td className="px-5 py-3 text-right font-mono text-xs">${p.price.toFixed(2)}</td>
+                  <td className="px-5 py-3 font-semibold text-xs max-w-[200px] truncate text-zinc-900 dark:text-zinc-100">
+                    {p.name}
+                  </td>
+                  <td className="px-5 py-3 text-xs font-medium text-zinc-500">{p.category}</td>
+                  <td className="px-5 py-3 text-right font-mono font-medium text-xs text-zinc-700 dark:text-zinc-300">
+                    ${p.price.toFixed(2)}
+                  </td>
                   <td className="px-5 py-3 text-center">
                     <span
-                      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${p.inStock ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400" : "bg-red-50 dark:bg-red-950 text-red-500 dark:text-red-400"}`}
+                      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide ${p.inStock ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900" : "bg-rose-50 dark:bg-rose-950/50 text-rose-500 dark:text-rose-400 border border-rose-200 dark:border-rose-900"}`}
                     >
                       {p.inStock ? "In Stock" : "Sold Out"}
                     </span>
@@ -182,8 +282,10 @@ export default function ISR({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      <p className="text-center text-[11px] font-mono text-zinc-400">
-        Rendered at: {timestamp} · Cache: {cacheStatus} · TTFB: {metrics.ttfb}ms
+      <p className="text-center text-[11px] font-mono font-medium text-zinc-500 py-6">
+        Rendered at: <span style={{ color: "var(--s-text)" }}>{timestamp}</span> · Cache:{" "}
+        <span className="font-bold">{cacheStatus}</span> · TTFB:{" "}
+        <span style={{ color: "var(--s-text)" }}>{metrics.ttfb}ms</span>
       </p>
 
       <SectionDivider label="When to use it" />
@@ -199,9 +301,9 @@ export default function ISR({ loaderData }: Route.ComponentProps) {
           "Cache purge is per-datacenter",
         ]}
         related={[
-          { to: "/ssg", label: "SSG", emoji: "🏗️" },
-          { to: "/ppr", label: "PPR", emoji: "🧩" },
-          { to: "/ssr", label: "SSR", emoji: "⚡" },
+          { to: "/ssg", label: "SSG", key: "SSG" },
+          { to: "/ppr", label: "PPR", key: "PPR" },
+          { to: "/ssr", label: "SSR", key: "SSR" },
         ]}
       />
     </StrategyPage>

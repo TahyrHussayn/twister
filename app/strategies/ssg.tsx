@@ -27,7 +27,6 @@ export default function SSG({ loaderData }: Route.ComponentProps) {
   return (
     <StrategyPage
       strategy="ssg"
-      emoji="🏗️"
       title="Static Site Generation"
       metrics={metrics}
       description={
@@ -38,44 +37,112 @@ export default function SSG({ loaderData }: Route.ComponentProps) {
         </>
       }
     >
+      <SectionDivider label="Request Lifecycle" />
+
+      {/* Flow Diagram */}
+      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 p-8 rounded-2xl border border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-[#050505]">
+        <div className="flow-step active">
+          <span className="text-lg">🛠️</span>
+          <span>Build Time</span>
+        </div>
+        <div className="flow-arrow active">→</div>
+        <div className="flow-step active">
+          <span className="text-lg">📄</span>
+          <span>Static HTML</span>
+        </div>
+        <div className="flow-arrow active">→</div>
+        <div className="flow-step active">
+          <span className="text-lg">🌍</span>
+          <span>CDN Cache</span>
+        </div>
+        <div className="flow-arrow active">→</div>
+        <div className="flow-step active">
+          <span className="text-lg">⚡</span>
+          <span>Instant Serve</span>
+        </div>
+      </div>
+
       <SectionDivider label="How it works" />
       <CodeSnippet code={SSG_CODE} filename="app/strategies/ssg.tsx" strategy="SSG" />
 
       <div
-        className="rounded-xl border p-4 text-sm"
+        className="rounded-2xl border p-5 text-sm my-6 shadow-sm flex items-center gap-4"
         style={{ backgroundColor: "var(--s-bg)", borderColor: "var(--s-border)" }}
       >
-        <p className="font-mono text-xs" style={{ color: "var(--s-text)" }}>
-          Data frozen at build time — this page will not update until the next build.
-        </p>
+        <span className="text-2xl filter drop-shadow-sm">🧊</span>
+        <div>
+          <span className="font-bold text-sm block mb-0.5" style={{ color: "var(--s-text)" }}>
+            Data frozen at build time
+          </span>
+          <span className="text-xs opacity-80" style={{ color: "var(--s-text)" }}>
+            This page will not update until the next deployment.
+          </span>
+        </div>
       </div>
 
       <SectionDivider label="Live demo" />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 card-hover">
-          <h2 className="font-semibold text-sm mb-4">Pre-rendered Profile</h2>
-          <div className="flex items-center gap-4">
-            <img src={profile.avatar} alt={profile.name} className="w-12 h-12 rounded-full" />
+      <div className="grid gap-6 sm:grid-cols-2">
+        <section
+          className="relative overflow-hidden rounded-2xl border bg-white dark:bg-[#050505] p-6 shadow-sm transition-shadow hover:shadow-md"
+          style={{ borderColor: "var(--s-border)" }}
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <span className="text-6xl text-emerald-500">👤</span>
+          </div>
+          <h2 className="font-bold text-sm mb-5 text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ backgroundColor: "var(--s-accent)" }}
+            />
+            Pre-rendered Profile
+          </h2>
+          <div className="flex items-center gap-5 relative z-10">
+            <img
+              src={profile.avatar}
+              alt={profile.name}
+              className="w-14 h-14 rounded-full ring-2 ring-white dark:ring-zinc-900 shadow-sm"
+            />
             <div>
-              <p className="font-semibold">{profile.name}</p>
-              <p className="text-xs text-zinc-500">{profile.email}</p>
-              <p className="text-[10px] font-mono text-zinc-400 mt-1">ID: {profile.id}</p>
+              <p className="font-bold text-zinc-900 dark:text-zinc-100">{profile.name}</p>
+              <p className="text-sm text-zinc-500">{profile.email}</p>
+              <p className="text-[10px] font-mono text-zinc-400 mt-1.5 bg-zinc-100 dark:bg-zinc-800/50 inline-block px-2 py-0.5 rounded">
+                ID: {profile.id}
+              </p>
             </div>
           </div>
         </section>
-        <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 card-hover">
-          <h2 className="font-semibold text-sm mb-4">Timestamps</h2>
-          <div className="space-y-4">
+
+        <section
+          className="relative overflow-hidden rounded-2xl border bg-white dark:bg-[#050505] p-6 shadow-sm transition-shadow hover:shadow-md"
+          style={{ borderColor: "var(--s-border)" }}
+        >
+          <h2 className="font-bold text-sm mb-5 text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ backgroundColor: "var(--s-accent)" }}
+            />
+            Timestamps
+          </h2>
+          <div className="space-y-5">
             <div>
-              <p className="text-[10px] text-zinc-400 uppercase tracking-wider">Build Time</p>
-              <code className="text-xs font-mono" style={{ color: "var(--s-accent)" }}>
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                Build Time (Frozen)
+              </p>
+              <code
+                className="text-sm font-mono font-bold px-2 py-1 rounded-md"
+                style={{ backgroundColor: "var(--s-bg)", color: "var(--s-text)" }}
+              >
                 {buildTimestamp}
               </code>
             </div>
             <div>
-              <p className="text-[10px] text-zinc-400 uppercase tracking-wider">Now (Browser)</p>
-              <code className="text-xs font-mono text-zinc-500">{new Date().toISOString()}</code>
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                Now (Browser)
+              </p>
+              <code className="text-sm font-mono text-zinc-500 bg-zinc-100 dark:bg-zinc-800/50 px-2 py-1 rounded-md">
+                {new Date().toISOString()}
+              </code>
             </div>
           </div>
         </section>
@@ -86,9 +153,9 @@ export default function SSG({ loaderData }: Route.ComponentProps) {
         pros={["Near-instant TTFB", "Perfect SEO", "Zero runtime compute cost"]}
         cons={["Data can be stale", "Must rebuild to update", "Not for dynamic data"]}
         related={[
-          { to: "/isr", label: "ISR", emoji: "🔄" },
-          { to: "/ppr", label: "PPR", emoji: "🧩" },
-          { to: "/streaming", label: "Streaming", emoji: "🌊" },
+          { to: "/isr", label: "ISR", key: "ISR" },
+          { to: "/ppr", label: "PPR", key: "PPR" },
+          { to: "/streaming", label: "Streaming", key: "Streaming" },
         ]}
       />
     </StrategyPage>

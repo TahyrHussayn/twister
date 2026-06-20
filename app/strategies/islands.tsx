@@ -31,26 +31,56 @@ export default function Islands({ loaderData }: Route.ComponentProps) {
   return (
     <StrategyPage
       strategy="islands"
-      emoji="🏝️"
       title="React Islands Architecture"
       metrics={metrics}
       description="The page is standard SSR. Each interactive component below is an independent island — it hydrates on its own, ships only its JS, and doesn't block other islands. Static content renders immediately from the server."
     >
+      <SectionDivider label="Request Lifecycle" />
+
+      {/* Flow Diagram */}
+      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 p-8 rounded-2xl border border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-[#050505]">
+        <div className="flow-step">
+          <span className="text-lg">⚙️</span>
+          <span>Server Renders All</span>
+        </div>
+        <div className="flow-arrow active">→</div>
+        <div className="flow-step active">
+          <span className="text-lg">📄</span>
+          <span>Static HTML Sent</span>
+        </div>
+        <div className="flow-arrow active">→</div>
+        <div className="flow-step active">
+          <span className="text-lg">🏝️</span>
+          <span>Islands Hydrate</span>
+        </div>
+        <div className="flow-arrow active">→</div>
+        <div className="flow-step active">
+          <span className="text-lg">✨</span>
+          <span>Interactive</span>
+        </div>
+      </div>
+
       <SectionDivider label="How it works" />
       <CodeSnippet code={CODE} filename="app/strategies/islands.tsx" strategy="Islands" />
 
       <div
-        className="rounded-xl border p-4 text-sm"
+        className="rounded-2xl border p-5 text-sm my-6 flex items-center gap-3 shadow-sm"
         style={{ backgroundColor: "var(--s-bg)", borderColor: "var(--s-border)" }}
       >
-        <p className="font-mono text-xs" style={{ color: "var(--s-text)" }}>
+        <div
+          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+          style={{ backgroundColor: "var(--s-accent)", color: "white" }}
+        >
+          <span className="text-sm">🏝️</span>
+        </div>
+        <p className="font-medium text-xs leading-relaxed" style={{ color: "var(--s-text)" }}>
           Each island hydrates independently. No shared state. Minimal JS per component.
         </p>
       </div>
 
       <SectionDivider label="Live demo — 6 independent islands" />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-6">
         <Suspense fallback={<SpinnerShell title="Like Button" />}>
           <LikeIsland />
         </Suspense>
@@ -71,19 +101,32 @@ export default function Islands({ loaderData }: Route.ComponentProps) {
         </Suspense>
       </div>
 
-      <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 card-hover">
-        <div className="flex items-center gap-4">
-          <img src={profile.avatar} alt={profile.name} className="w-12 h-12 rounded-full" />
+      <section className="relative overflow-hidden rounded-2xl border bg-white dark:bg-[#050505] p-6 shadow-sm transition-shadow hover:shadow-md border-zinc-200 dark:border-zinc-800">
+        <div className="absolute top-0 right-0 p-4 opacity-10">
+          <span className="text-6xl text-zinc-500">📄</span>
+        </div>
+        <div className="flex items-center gap-5 relative z-10">
+          <img
+            src={profile.avatar}
+            alt={profile.name}
+            className="w-14 h-14 rounded-full ring-2 ring-white dark:ring-zinc-900 shadow-sm"
+          />
           <div>
-            <p className="font-semibold">{profile.name}</p>
-            <p className="text-xs text-zinc-500">{profile.email}</p>
+            <p className="font-bold text-zinc-900 dark:text-zinc-100">{profile.name}</p>
+            <p className="text-sm text-zinc-500">{profile.email}</p>
           </div>
         </div>
-        <p className="text-[10px] text-zinc-400 mt-3">This profile is server-rendered (static).</p>
+        <div className="mt-5 pt-3 border-t border-zinc-100 dark:border-zinc-800/50 relative z-10">
+          <p className="text-[10px] font-bold tracking-wider uppercase flex items-center gap-1.5 text-zinc-500">
+            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+            This profile is server-rendered (static).
+          </p>
+        </div>
       </section>
 
-      <p className="text-center text-[11px] font-mono text-zinc-400">
-        Server timestamp: {timestamp} · Each island ships its own JS bundle
+      <p className="text-center text-[11px] font-mono font-medium text-zinc-500 py-6">
+        Server timestamp: <span style={{ color: "var(--s-text)" }}>{timestamp}</span> · Each island
+        ships its own JS bundle
       </p>
 
       <SectionDivider label="When to use it" />
@@ -91,9 +134,9 @@ export default function Islands({ loaderData }: Route.ComponentProps) {
         pros={["Minimal JS shipped", "Independent hydration", "Excellent performance"]}
         cons={["Not for app-like UIs", "Cross-island communication hard", "Tooling still emerging"]}
         related={[
-          { to: "/csr", label: "CSR", emoji: "🖥️" },
-          { to: "/ppr", label: "PPR", emoji: "🧩" },
-          { to: "/streaming", label: "Streaming", emoji: "🌊" },
+          { to: "/csr", label: "CSR", key: "CSR" },
+          { to: "/ppr", label: "PPR", key: "PPR" },
+          { to: "/streaming", label: "Streaming", key: "Streaming" },
         ]}
       />
     </StrategyPage>
@@ -102,11 +145,9 @@ export default function Islands({ loaderData }: Route.ComponentProps) {
 
 function SpinnerShell({ title }: { title: string }) {
   return (
-    <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 flex items-center justify-center h-28">
-      <div className="text-center">
-        <div className="h-3 w-20 shimmer rounded mx-auto mb-2" />
-        <p className="text-[10px] text-zinc-400">{title} loading...</p>
-      </div>
+    <div className="rounded-2xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-zinc-900/50 p-6 flex flex-col items-center justify-center h-40 shadow-sm">
+      <div className="h-4 w-24 shimmer rounded-full mx-auto mb-3 bg-zinc-100 dark:bg-zinc-800" />
+      <p className="text-[10px] font-bold tracking-wider uppercase text-zinc-400">{title}</p>
     </div>
   );
 }
@@ -114,17 +155,27 @@ function SpinnerShell({ title }: { title: string }) {
 function LikeIsland() {
   const [likes, setLikes] = useState(42);
   return (
-    <div className="rounded-xl border border-teal-200 dark:border-teal-800 bg-white dark:bg-zinc-900 p-5 text-center card-hover">
-      <p className="text-[10px] font-semibold text-teal-600 dark:text-teal-400 mb-3 uppercase tracking-wider">
+    <div
+      className="rounded-2xl border bg-white dark:bg-[#050505] p-6 text-center shadow-sm transition-all hover:shadow-md flex flex-col h-40"
+      style={{ borderColor: "var(--s-border)" }}
+    >
+      <p
+        className="text-[10px] font-bold uppercase tracking-wider mb-auto"
+        style={{ color: "var(--s-accent)" }}
+      >
         🏝️ Like Button
       </p>
-      <button
-        type="button"
-        onClick={() => setLikes((l) => l + 1)}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 dark:bg-teal-900 text-teal-700 dark:text-teal-300 hover:bg-teal-200 dark:hover:bg-teal-800 transition-colors text-sm font-medium"
-      >
-        ❤️ {likes}
-      </button>
+      <div className="flex justify-center mt-auto">
+        <button
+          type="button"
+          onClick={() => setLikes((l) => l + 1)}
+          className="inline-flex items-center justify-center gap-2.5 px-6 py-2.5 rounded-xl font-bold transition-transform hover:scale-105 active:scale-95 shadow-sm"
+          style={{ backgroundColor: "var(--s-bg)", color: "var(--s-text)" }}
+        >
+          <span className="text-lg">❤️</span>
+          <span className="text-base">{likes}</span>
+        </button>
+      </div>
     </div>
   );
 }
@@ -136,11 +187,21 @@ function ClockIsland() {
     return () => clearInterval(id);
   }, []);
   return (
-    <div className="rounded-xl border border-teal-200 dark:border-teal-800 bg-white dark:bg-zinc-900 p-5 text-center card-hover">
-      <p className="text-[10px] font-semibold text-teal-600 dark:text-teal-400 mb-3 uppercase tracking-wider">
+    <div
+      className="rounded-2xl border bg-white dark:bg-[#050505] p-6 text-center shadow-sm transition-all hover:shadow-md flex flex-col h-40"
+      style={{ borderColor: "var(--s-border)" }}
+    >
+      <p
+        className="text-[10px] font-bold uppercase tracking-wider mb-auto"
+        style={{ color: "var(--s-accent)" }}
+      >
         🏝️ Live Clock
       </p>
-      <p className="text-2xl font-mono font-bold">{time.toLocaleTimeString()}</p>
+      <div className="mt-auto mb-2 py-2 px-4 rounded-xl border border-zinc-100 dark:border-zinc-800/50 bg-zinc-50 dark:bg-zinc-900/50 inline-block mx-auto">
+        <p className="text-2xl font-mono font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+          {time.toLocaleTimeString()}
+        </p>
+      </div>
     </div>
   );
 }
@@ -158,33 +219,41 @@ function CommentsIsland() {
     }
   };
   return (
-    <div className="rounded-xl border border-teal-200 dark:border-teal-800 bg-white dark:bg-zinc-900 p-5">
-      <p className="text-[10px] font-semibold text-teal-600 dark:text-teal-400 mb-3 uppercase tracking-wider">
+    <div
+      className="rounded-2xl border bg-white dark:bg-[#050505] p-5 shadow-sm transition-all hover:shadow-md flex flex-col h-40 row-span-2 sm:row-span-1 sm:col-span-2 lg:col-span-1"
+      style={{ borderColor: "var(--s-border)" }}
+    >
+      <p
+        className="text-[10px] font-bold uppercase tracking-wider mb-3 text-center"
+        style={{ color: "var(--s-accent)" }}
+      >
         🏝️ Comments
       </p>
-      <div className="space-y-1.5 mb-3 max-h-28 overflow-y-auto text-xs">
+      <div className="space-y-2 mb-3 overflow-y-auto flex-1 text-xs pr-1 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-700">
         {[...comments].reverse().map((c) => (
-          <p
+          <div
             key={c.id}
-            className="border-b border-zinc-50 dark:border-zinc-800 pb-1 text-zinc-600 dark:text-zinc-400"
+            className="rounded-lg bg-zinc-50 dark:bg-zinc-900/50 px-3 py-2 border border-zinc-100 dark:border-zinc-800/50"
           >
-            {c.text}
-          </p>
+            <p className="text-zinc-700 dark:text-zinc-300 font-medium">{c.text}</p>
+          </div>
         ))}
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-2 mt-auto">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
           placeholder="Add comment..."
-          className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-teal-500"
+          className="flex-1 px-3 py-2 text-xs font-medium rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 placeholder:text-zinc-400"
+          style={{ "--tw-ring-color": "var(--s-accent)" } as any}
         />
         <button
           type="button"
           onClick={add}
-          className="px-3 py-1.5 text-xs rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-medium transition-colors"
+          className="px-4 py-2 text-xs rounded-xl font-bold transition-transform hover:scale-105 active:scale-95 shadow-sm text-white"
+          style={{ backgroundColor: "var(--s-accent)" }}
         >
           Post
         </button>
@@ -196,24 +265,37 @@ function CommentsIsland() {
 function ShareIsland() {
   const [shared, setShared] = useState(false);
   return (
-    <div className="rounded-xl border border-teal-200 dark:border-teal-800 bg-white dark:bg-zinc-900 p-5 text-center card-hover">
-      <p className="text-[10px] font-semibold text-teal-600 dark:text-teal-400 mb-3 uppercase tracking-wider">
+    <div
+      className="rounded-2xl border bg-white dark:bg-[#050505] p-6 text-center shadow-sm transition-all hover:shadow-md flex flex-col h-40"
+      style={{ borderColor: "var(--s-border)" }}
+    >
+      <p
+        className="text-[10px] font-bold uppercase tracking-wider mb-auto"
+        style={{ color: "var(--s-accent)" }}
+      >
         🏝️ Share Widget
       </p>
-      {shared ? (
-        <p className="text-emerald-600 dark:text-emerald-400 font-medium text-sm">Link copied!</p>
-      ) : (
-        <button
-          type="button"
-          onClick={() => {
-            void navigator.clipboard.writeText(window.location.href);
-            setShared(true);
-          }}
-          className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium transition-colors"
-        >
-          Share URL
-        </button>
-      )}
+      <div className="mt-auto">
+        {shared ? (
+          <div className="inline-flex items-center justify-center px-6 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30">
+            <p className="text-emerald-600 dark:text-emerald-400 font-bold text-sm flex items-center gap-2">
+              <span className="text-base">✅</span> Copied!
+            </p>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              void navigator.clipboard.writeText(window.location.href);
+              setShared(true);
+            }}
+            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-white text-xs font-bold transition-transform hover:scale-105 active:scale-95 shadow-sm"
+            style={{ backgroundColor: "var(--s-accent)" }}
+          >
+            <span className="text-base">🔗</span> Share URL
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -223,26 +305,41 @@ function SearchIsland() {
   const items = ["Edge SSR", "Streaming", "ISR", "PPR", "Islands", "Static", "Suspense"];
   const filtered = query ? items.filter((i) => i.toLowerCase().includes(query.toLowerCase())) : [];
   return (
-    <div className="rounded-xl border border-teal-200 dark:border-teal-800 bg-white dark:bg-zinc-900 p-5">
-      <p className="text-[10px] font-semibold text-teal-600 dark:text-teal-400 mb-3 uppercase tracking-wider">
+    <div
+      className="rounded-2xl border bg-white dark:bg-[#050505] p-5 shadow-sm transition-all hover:shadow-md flex flex-col h-40"
+      style={{ borderColor: "var(--s-border)" }}
+    >
+      <p
+        className="text-[10px] font-bold uppercase tracking-wider mb-3 text-center"
+        style={{ color: "var(--s-accent)" }}
+      >
         🏝️ Search
       </p>
       <input
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search strategies..."
-        className="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-teal-500 mb-2"
+        placeholder="Search..."
+        className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 focus:outline-none focus:ring-2 focus:bg-white dark:focus:bg-zinc-950 transition-colors mb-2"
+        style={{ "--tw-ring-color": "var(--s-accent)" } as any}
       />
-      {filtered.length > 0 && (
-        <ul className="space-y-1">
-          {filtered.map((f) => (
-            <li key={f} className="text-xs px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-800">
-              {f}
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="flex-1 overflow-y-auto pr-1">
+        {filtered.length > 0 ? (
+          <ul className="space-y-1.5">
+            {filtered.map((f) => (
+              <li
+                key={f}
+                className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg"
+                style={{ backgroundColor: "var(--s-bg)", color: "var(--s-text)" }}
+              >
+                {f}
+              </li>
+            ))}
+          </ul>
+        ) : query ? (
+          <p className="text-[10px] text-zinc-400 text-center mt-2 font-medium">No matches</p>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -251,25 +348,35 @@ function TabsIsland() {
   const [tab, setTab] = useState(0);
   const items = ["Edge SSR", "Streaming", "ISR", "PPR"];
   return (
-    <div className="rounded-xl border border-teal-200 dark:border-teal-800 bg-white dark:bg-zinc-900 p-5 card-hover">
-      <p className="text-[10px] font-semibold text-teal-600 dark:text-teal-400 mb-3 uppercase tracking-wider">
+    <div
+      className="rounded-2xl border bg-white dark:bg-[#050505] p-5 shadow-sm transition-all hover:shadow-md flex flex-col h-40"
+      style={{ borderColor: "var(--s-border)" }}
+    >
+      <p
+        className="text-[10px] font-bold uppercase tracking-wider mb-3 text-center"
+        style={{ color: "var(--s-accent)" }}
+      >
         🏝️ Tabs
       </p>
-      <div className="flex gap-1 mb-3">
+      <div className="flex flex-wrap gap-1.5 mb-auto justify-center">
         {items.map((item, i) => (
           <button
             key={item}
             type="button"
             onClick={() => setTab(i)}
-            className={`px-3 py-1 rounded text-[10px] font-medium transition-colors ${i === tab ? "bg-teal-600 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"}`}
+            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${i === tab ? "shadow-sm text-white scale-105" : "bg-zinc-100 dark:bg-zinc-900 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800"}`}
+            style={i === tab ? { backgroundColor: "var(--s-accent)" } : {}}
           >
             {item}
           </button>
         ))}
       </div>
-      <p className="text-xs text-zinc-600 dark:text-zinc-400">
-        {items[tab]} is a rendering strategy.
-      </p>
+      <div className="mt-3 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800/50 bg-zinc-50 dark:bg-zinc-900/30">
+        <p className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 text-center">
+          <span className="font-bold text-zinc-900 dark:text-zinc-100">{items[tab]}</span> is a
+          rendering strategy.
+        </p>
+      </div>
     </div>
   );
 }

@@ -1,59 +1,65 @@
 import { NavLink } from "react-router";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { STRATEGY_ACCENTS } from "~/lib/theme";
 
 const LINKS = [
-  { to: "/", label: "Dashboard", emoji: "📊" },
-  { to: "/ssr", label: "SSR", emoji: "⚡" },
-  { to: "/csr", label: "CSR", emoji: "🖥️" },
-  { to: "/ssg", label: "SSG", emoji: "🏗️" },
-  { to: "/streaming", label: "Streaming", emoji: "🌊" },
-  { to: "/isr", label: "ISR", emoji: "🔄" },
-  { to: "/ppr", label: "PPR", emoji: "🧩" },
-  { to: "/islands", label: "Islands", emoji: "🏝️" },
+  { to: "/", label: "Dashboard", key: "Dashboard" },
+  { to: "/ssr", label: "SSR", key: "SSR" },
+  { to: "/csr", label: "CSR", key: "CSR" },
+  { to: "/ssg", label: "SSG", key: "SSG" },
+  { to: "/streaming", label: "Streaming", key: "Streaming" },
+  { to: "/isr", label: "ISR", key: "ISR" },
+  { to: "/ppr", label: "PPR", key: "PPR" },
+  { to: "/islands", label: "Islands", key: "Islands" },
 ] as const;
 
 export function Nav() {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="glass-nav">
+    <nav className="elite-nav">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
         <NavLink
           to="/"
-          viewTransition
-          className="flex items-center gap-2 font-bold text-lg text-zinc-900 dark:text-white hover:opacity-80 transition-opacity shrink-0"
+          className="flex items-center gap-2 font-bold text-lg text-white hover:opacity-80 transition-opacity shrink-0 tracking-tight"
         >
-          <span className="text-xl">🌪️</span>
-          <span className="hidden sm:inline">Twister</span>
+          Twister
         </NavLink>
 
-        <div className="hidden md:flex items-center gap-0.5">
-          {LINKS.map(({ to, label, emoji }) => (
-            <NavLink
-              key={to}
-              to={to}
-              viewTransition
-              prefetch="intent"
-              className={({ isActive }) =>
-                `px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                  isActive
-                    ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-sm"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                }`
-              }
-            >
-              <span>{emoji}</span>
-              {label}
-            </NavLink>
-          ))}
+        <div className="hidden md:flex items-center gap-1">
+          {LINKS.map(({ to, label, key }) => {
+            const accentColor = key !== "Dashboard" ? STRATEGY_ACCENTS[key]?.hex : undefined;
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                prefetch="intent"
+                viewTransition
+                className={({ isActive }) =>
+                  `px-3 py-1.5 rounded-full text-[13px] font-medium transition-colors duration-200 flex items-center gap-2 ${
+                    isActive
+                      ? "bg-white text-black"
+                      : "text-zinc-400 hover:text-zinc-100 hover:bg-white/5"
+                  }`
+                }
+              >
+                {accentColor && (
+                  <span
+                    className="w-1.5 h-1.5 rounded-full inline-block"
+                    style={{ backgroundColor: accentColor, boxShadow: `0 0 8px ${accentColor}80` }}
+                  />
+                )}
+                {label}
+              </NavLink>
+            );
+          })}
         </div>
 
         <div className="flex items-center gap-2">
-          <ThemeToggle />
           <button
             type="button"
             onClick={() => setOpen(!open)}
-            className="md:hidden p-2 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            className="md:hidden p-2 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
             aria-label="Toggle menu"
           >
             <svg
@@ -74,61 +80,38 @@ export function Nav() {
       </div>
 
       {open && (
-        <div className="md:hidden border-t border-zinc-200/60 dark:border-zinc-800/60 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-lg">
+        <div className="md:hidden border-t border-zinc-800/60 bg-[#050505]/95 backdrop-blur-lg">
           <div className="px-4 py-3 space-y-1 max-w-7xl mx-auto">
-            {LINKS.map(({ to, label, emoji }) => (
-              <NavLink
-                key={to}
-                to={to}
-                viewTransition
-                onClick={() => setOpen(false)}
-                className={({ isActive }) =>
-                  `block px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                    isActive
-                      ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
-                      : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                  }`
-                }
-              >
-                <span className="mr-2">{emoji}</span>
-                {label}
-              </NavLink>
-            ))}
+            {LINKS.map(({ to, label, key }) => {
+              const accentColor = key !== "Dashboard" ? STRATEGY_ACCENTS[key]?.hex : undefined;
+              return (
+                <NavLink
+                  key={to}
+                  to={to}
+                  viewTransition
+                  onClick={() => setOpen(false)}
+                  className={({ isActive }) =>
+                    `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                      isActive ? "bg-white text-black" : "text-zinc-400 hover:bg-zinc-800"
+                    }`
+                  }
+                >
+                  {accentColor && (
+                    <span
+                      className="w-1.5 h-1.5 rounded-full inline-block"
+                      style={{
+                        backgroundColor: accentColor,
+                        boxShadow: `0 0 8px ${accentColor}80`,
+                      }}
+                    />
+                  )}
+                  {label}
+                </NavLink>
+              );
+            })}
           </div>
         </div>
       )}
     </nav>
-  );
-}
-
-function ThemeToggle() {
-  const [dark, setDark] = useState(false);
-
-  useEffect(() => {
-    setDark(document.documentElement.classList.contains("dark"));
-  }, []);
-
-  const toggle = () => {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={toggle}
-      className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
-      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-    >
-      <span
-        className="text-base transition-transform duration-300 inline-block"
-        key={String(dark)}
-        style={{ animation: "scale-in 0.2s ease-out" }}
-      >
-        {dark ? "☀️" : "🌙"}
-      </span>
-    </button>
   );
 }

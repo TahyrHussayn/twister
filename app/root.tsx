@@ -5,7 +5,9 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useNavigation,
 } from "react-router";
+import { useEffect, useState } from "react";
 
 import type { Route } from "./+types/root";
 import { Nav } from "./components/nav";
@@ -24,22 +26,59 @@ export const links: Route.LinksFunction = () => [
   },
 ];
 
+function ProgressBar() {
+  const navigation = useNavigation();
+  const active = navigation.state !== "idle";
+  const [complete, setComplete] = useState(false);
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    if (active) {
+      setShow(true);
+      setComplete(false);
+    } else if (show) {
+      setComplete(true);
+      const timeout = setTimeout(() => {
+        setShow(false);
+      }, 400); // Allow time for the bar to hit 100% and fade out
+      return () => clearTimeout(timeout);
+    }
+  }, [active, show]);
+
+  if (!show) return null;
+
+  return (
+    <div
+      className="fixed top-0 left-0 w-full h-[2px] z-[100] pointer-events-none transition-opacity duration-300"
+      style={{ opacity: complete ? 0 : 1 }}
+    >
+      <div
+        className="h-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.5)] origin-left"
+        style={{
+          transform: complete ? "scaleX(1)" : "scaleX(0)",
+          animation: complete
+            ? "none"
+            : "progress-bar-loading 10s cubic-bezier(0.075, 0.82, 0.165, 1) forwards",
+          transition: complete ? "transform 0.2s ease-out" : "none",
+        }}
+      />
+    </div>
+  );
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Twister</title>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){var t=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.classList.toggle('dark',t==='dark')})()`,
-          }}
-        />
         <Meta />
         <Links />
       </head>
       <body>
+        <ProgressBar />
+        <div className="elite-bg" />
         <Nav />
         {children}
         <ScrollRestoration />
@@ -50,8 +89,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const navigation = useNavigation();
+  const isLoading = navigation.state === "loading";
+
   return (
-    <main className="max-w-7xl mx-auto px-4 py-8">
+    <main
+      className="max-w-7xl mx-auto px-4 py-8 min-h-screen"
+      style={{
+        viewTransitionName: "main-content",
+        opacity: isLoading ? 0.6 : 1,
+        transition: "opacity 0.15s ease-in-out",
+      }}
+    >
       <Outlet />
     </main>
   );

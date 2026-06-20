@@ -8,35 +8,29 @@ import {
 } from "~/lib/data";
 import { createMetrics } from "~/lib/metrics";
 import { MetricsBar } from "~/components/metrics-badge";
+import { CodeSnippet } from "~/components/code-snippet";
+import { ComparisonPanel } from "~/components/comparison-panel";
 
-export function meta(_args: Route.MetaArgs) {
-  return [
-    { title: "SSR — Server-Side Rendering on the Edge" },
-    {
-      name: "description",
-      content: "Live SSR demo: HTML rendered per-request on Cloudflare Workers",
-    },
-  ];
+export function meta() {
+  return [{ title: "SSR — Server-Side Rendering on the Edge" }];
 }
-
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
   return loaderHeaders;
 }
 
 export async function loader() {
   const [profile, activities, analytics, timestamp] = await Promise.all([
-    fetchUserProfile(),
-    fetchActivityFeed(),
-    fetchAnalytics(),
+    fetchUserProfile(400),
+    fetchActivityFeed(800),
+    fetchAnalytics(600),
     Promise.resolve(fetchServerTimestamp()),
   ]);
-  const metrics = createMetrics("SSR");
   return {
     profile,
     activities,
     analytics,
     timestamp,
-    metrics,
+    metrics: createMetrics("SSR"),
     serverMessage: env.VALUE_FROM_CLOUDFLARE,
   };
 }
@@ -45,58 +39,56 @@ export default function SSR({ loaderData }: Route.ComponentProps) {
   const { profile, activities, analytics, timestamp, metrics, serverMessage } = loaderData;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in">
       <header>
-        <div className="flex items-center gap-3 mb-2">
-          <span className="text-3xl">⚡</span>
-          <h1 className="text-3xl font-bold">Server-Side Rendering</h1>
-        </div>
+        <h1 className="text-3xl font-bold mb-1">⚡ Server-Side Rendering</h1>
         <MetricsBar metrics={metrics} />
-        <p className="mt-4 text-gray-600 dark:text-gray-400 max-w-2xl">
-          This page is fully rendered on a Cloudflare Worker per-request. All data is fetched at the
-          edge before HTML is streamed to the browser. Below is live data from the server, including
-          an environment variable from the Cloudflare Worker context:
+        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed">
+          HTML is rendered per-request on a Cloudflare Worker. All data fetches run at the edge
+          before streaming to the browser.
         </p>
-        <div className="mt-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
-          <code className="text-sm font-mono text-blue-700 dark:text-blue-300">
-            {serverMessage}
-          </code>
+        <div className="mt-4 p-4 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 text-sm">
+          <span className="text-blue-600 dark:text-blue-400 font-mono">{serverMessage}</span>
+          <span className="block mt-1 text-xs text-blue-500 dark:text-blue-400/70">
+            Env var from wrangler.jsonc
+          </span>
         </div>
       </header>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <section className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6">
-          <h2 className="font-bold text-lg mb-4">User Profile</h2>
+      <CodeSnippet code={SSR_CODE} filename="app/strategies/ssr.tsx" strategy="SSR" />
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 card-hover">
+          <h2 className="font-semibold text-sm mb-4">User Profile</h2>
           <div className="flex items-center gap-4">
             <span className="text-4xl">{profile.avatar}</span>
             <div>
               <p className="font-semibold">{profile.name}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{profile.email}</p>
-              <p className="text-xs text-gray-400 font-mono mt-1">ID: {profile.id}</p>
+              <p className="text-xs text-zinc-500">{profile.email}</p>
+              <p className="text-[10px] font-mono text-zinc-400 mt-1">ID: {profile.id}</p>
             </div>
           </div>
         </section>
-
-        <section className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6">
-          <h2 className="font-bold text-lg mb-4">Analytics</h2>
+        <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 card-hover">
+          <h2 className="font-semibold text-sm mb-4">Analytics</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-500">Page Views</p>
-              <p className="text-2xl font-bold font-mono">{analytics.pageViews.toLocaleString()}</p>
+              <p className="text-[10px] text-zinc-400 uppercase tracking-wider">Page Views</p>
+              <p className="text-xl font-bold font-mono">{analytics.pageViews.toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Unique Visitors</p>
-              <p className="text-2xl font-bold font-mono">
+              <p className="text-[10px] text-zinc-400 uppercase tracking-wider">Visitors</p>
+              <p className="text-xl font-bold font-mono">
                 {analytics.uniqueVisitors.toLocaleString()}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Avg Session</p>
-              <p className="text-2xl font-bold font-mono">{analytics.avgSessionDuration}s</p>
+              <p className="text-[10px] text-zinc-400 uppercase tracking-wider">Avg Session</p>
+              <p className="text-xl font-bold font-mono">{analytics.avgSessionDuration}s</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Bounce Rate</p>
-              <p className="text-2xl font-bold font-mono">
+              <p className="text-[10px] text-zinc-400 uppercase tracking-wider">Bounce</p>
+              <p className="text-xl font-bold font-mono">
                 {(analytics.bounceRate * 100).toFixed(0)}%
               </p>
             </div>
@@ -104,16 +96,16 @@ export default function SSR({ loaderData }: Route.ComponentProps) {
         </section>
       </div>
 
-      <section className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6">
-        <h2 className="font-bold text-lg mb-4">Recent Activity</h2>
-        <div className="divide-y divide-gray-100 dark:divide-gray-800">
+      <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+        <h2 className="font-semibold text-sm mb-4">Activity Feed</h2>
+        <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
           {activities.map((a) => (
-            <div key={a.id} className="flex items-center justify-between py-3">
+            <div key={a.id} className="flex items-center justify-between py-3 text-sm">
               <div>
-                <span className="font-medium">{a.action}</span>
-                <span className="text-gray-500 dark:text-gray-400"> {a.target}</span>
+                <span className="font-medium">{a.action}</span>{" "}
+                <span className="text-zinc-500">{a.target}</span>
               </div>
-              <time className="text-xs font-mono text-gray-400">
+              <time className="text-[11px] font-mono text-zinc-400">
                 {new Date(a.timestamp).toLocaleTimeString()}
               </time>
             </div>
@@ -121,11 +113,27 @@ export default function SSR({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      <footer className="text-xs text-gray-400 font-mono text-center">
-        Edge timestamp: {timestamp}
-        <br />
-        Rendered on Cloudflare Worker at {metrics.renderedAt}
-      </footer>
+      <p className="text-center text-[11px] font-mono text-zinc-400">Edge timestamp: {timestamp}</p>
+
+      <ComparisonPanel
+        pros={["Always fresh data", "SEO-friendly", "Personalized content per request"]}
+        cons={["Higher server cost", "Slower TTFB than static", "Cold starts possible"]}
+        related={[
+          { to: "/csr", label: "CSR", emoji: "🖥️" },
+          { to: "/ssg", label: "SSG", emoji: "🏗️" },
+          { to: "/streaming", label: "Streaming", emoji: "🌊" },
+        ]}
+      />
     </div>
   );
 }
+
+const SSR_CODE = `export async function loader() {
+  const [profile, activities, analytics] =
+    await Promise.all([
+      fetchUserProfile(400),
+      fetchActivityFeed(800),
+      fetchAnalytics(600),
+    ]);
+  return { profile, activities, analytics };
+}`;

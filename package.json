@@ -25,11 +25,11 @@
     "@types/node": "^26.0.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@voidzero-dev/vite-plus-linux-x64-gnu": "0.2.1",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.3",
     "vite": "catalog:",
     "vite-plus": "catalog:",
-    "@voidzero-dev/vite-plus-linux-x64-gnu": "0.2.1",
     "wrangler": "^4.102.0"
   },
   "packageManager": "pnpm@11.8.0"

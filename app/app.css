@@ -7,16 +7,54 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-html,
+/* Base */
+html {
+  scroll-behavior: smooth;
+}
 body {
-  @apply bg-gray-50 dark:bg-gray-950;
-
+  @apply bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 antialiased;
   @media (prefers-color-scheme: dark) {
     color-scheme: dark;
   }
 }
 
 /* View Transitions */
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes vt-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+::view-transition-old(root) {
+  animation: vt-fade-out 0.12s ease-out;
+}
+::view-transition-new(root) {
+  animation: vt-fade-in 0.18s ease-out;
+}
+
+/* Shimmer skeleton */
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -27,22 +65,90 @@ body {
     transform: translateY(0);
   }
 }
-
-@keyframes fade-out {
+@keyframes scale-in {
   from {
-    opacity: 1;
-    transform: translateY(0);
+    opacity: 0;
+    transform: scale(0.95);
   }
   to {
-    opacity: 0;
-    transform: translateY(-8px);
+    opacity: 1;
+    transform: scale(1);
   }
 }
-
-::view-transition-old(root) {
-  animation: fade-out 0.15s ease-out;
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out both;
+}
+.animate-scale-in {
+  animation: scale-in 0.25s ease-out both;
 }
 
-::view-transition-new(root) {
-  animation: fade-in 0.2s ease-out;
+/* Shimmer base */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    theme("colors.zinc.200") 25%,
+    theme("colors.zinc.100") 50%,
+    theme("colors.zinc.200") 75%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+.dark .shimmer,
+:root.dark .shimmer {
+  background: linear-gradient(
+    90deg,
+    theme("colors.zinc.800") 25%,
+    theme("colors.zinc.700") 50%,
+    theme("colors.zinc.800") 75%
+  );
+  background-size: 400% 100%;
+}
+
+/* Strategy accent border gradients */
+.strategy-border-ssr {
+  @apply border-blue-200 dark:border-blue-900;
+}
+.strategy-border-csr {
+  @apply border-purple-200 dark:border-purple-900;
+}
+.strategy-border-ssg {
+  @apply border-emerald-200 dark:border-emerald-900;
+}
+.strategy-border-streaming {
+  @apply border-cyan-200 dark:border-cyan-900;
+}
+.strategy-border-isr {
+  @apply border-amber-200 dark:border-amber-900;
+}
+.strategy-border-ppr {
+  @apply border-pink-200 dark:border-pink-900;
+}
+.strategy-border-islands {
+  @apply border-teal-200 dark:border-teal-900;
+}
+
+/* Card hover effect */
+.card-hover {
+  @apply transition-all duration-200;
+}
+.card-hover:hover {
+  @apply -translate-y-0.5 shadow-lg;
+  border-color: var(--card-accent, theme("colors.zinc.300"));
+}
+.dark .card-hover:hover {
+  border-color: var(--card-accent, theme("colors.zinc.600"));
+}
+
+/* Glass nav */
+.glass {
+  @apply bg-white/80 dark:bg-zinc-950/80 backdrop-blur-lg border-b border-zinc-200/60 dark:border-zinc-800/60;
 }

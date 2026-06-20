@@ -33,7 +33,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+      <body>
         <Nav />
         {children}
         <ScrollRestoration />
@@ -66,16 +66,19 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   }
 
   return (
-    <main className="max-w-2xl mx-auto px-4 pt-24">
-      <div className="rounded-2xl border border-red-200 dark:border-red-900 bg-white dark:bg-gray-900 p-8">
+    <main className="max-w-2xl mx-auto px-4 sm:px-6 pt-24">
+      <div className="rounded-2xl border border-red-200 dark:border-red-900 bg-white dark:bg-zinc-900 p-8">
         <h1 className="text-4xl font-bold text-red-600 dark:text-red-400 mb-4">{message}</h1>
-        <p className="text-gray-600 dark:text-gray-400 mb-4">{details}</p>
+        <p className="text-zinc-600 dark:text-zinc-400 mb-4">{details}</p>
         {stack && (
-          <pre className="w-full p-4 overflow-x-auto rounded-lg bg-red-50 dark:bg-red-950 text-sm font-mono">
+          <pre className="w-full p-4 overflow-x-auto rounded-xl bg-red-50 dark:bg-red-950 text-sm font-mono">
             <code>{stack}</code>
           </pre>
         )}
-        <a href="/" className="inline-block mt-6 text-blue-600 dark:text-blue-400 hover:underline">
+        <a
+          href="/"
+          className="inline-block mt-6 text-blue-600 dark:text-blue-400 hover:underline font-medium"
+        >
           Go back home
         </a>
       </div>

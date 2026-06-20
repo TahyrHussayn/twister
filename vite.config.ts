@@ -1,24 +1,14 @@
 import { reactRouter } from "@react-router/dev/vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig, lazyPlugins } from "vite-plus";
+import tsconfigPaths from "vite-tsconfig-paths";
+import { defineConfig } from "vite";
 
 export default defineConfig({
-  staged: {
-    "*": "vp check --fix",
-  },
-  fmt: {},
-  lint: {
-    jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
-    rules: { "vite-plus/prefer-vite-plus-imports": "error" },
-    options: { typeAware: true, typeCheck: true },
-  },
-  plugins: lazyPlugins(() => [
+  plugins: [
     cloudflare({ viteEnvironment: { name: "ssr" } }),
     tailwindcss(),
     reactRouter(),
-  ]),
-  resolve: {
-    tsconfigPaths: true,
-  },
+    tsconfigPaths(),
+  ],
 });

@@ -35,20 +35,6 @@ export type Product = {
   category: string;
 };
 
-const RECOMMENDATIONS: Recommendation[] = [
-  { id: "r1", title: "Edge Computing Patterns", category: "Architecture", score: 0.98 },
-  { id: "r2", title: "Streaming SSR Deep Dive", category: "Performance", score: 0.95 },
-  { id: "r3", title: "Cache-First Strategies", category: "Infrastructure", score: 0.92 },
-  { id: "r4", title: "Partial Prerendering Guide", category: "Rendering", score: 0.89 },
-];
-
-const ANALYTICS: Analytics = {
-  pageViews: 12847,
-  uniqueVisitors: 4321,
-  avgSessionDuration: 187,
-  bounceRate: 0.23,
-};
-
 export async function fetchUserProfile(delay = 0): Promise<UserProfile> {
   const res = await fetch("https://randomuser.me/api/");
   const json = (await res.json()) as {
@@ -86,13 +72,28 @@ export async function fetchActivityFeed(delay = 0): Promise<ActivityItem[]> {
 }
 
 export async function fetchRecommendations(delay = 0): Promise<Recommendation[]> {
+  const res = await fetch("https://dummyjson.com/products?limit=4&select=title,category,rating");
+  const json = (await res.json()) as {
+    products: { title: string; category: string; rating: number }[];
+  };
   if (delay > 0) await new Promise((r) => setTimeout(r, delay));
-  return RECOMMENDATIONS;
+  return json.products.map((p, i) => ({
+    id: `r${i + 1}`,
+    title: p.title.slice(0, 28),
+    category: p.category,
+    score: p.rating / 5,
+  }));
 }
 
 export async function fetchAnalytics(delay = 0): Promise<Analytics> {
   if (delay > 0) await new Promise((r) => setTimeout(r, delay));
-  return ANALYTICS;
+  const s = (Date.now() % 1000) / 1000;
+  return {
+    pageViews: Math.round(10000 + s * 5000),
+    uniqueVisitors: Math.round(3000 + s * 2000),
+    avgSessionDuration: Math.round(120 + s * 120),
+    bounceRate: Math.round((0.15 + s * 0.1) * 100) / 100,
+  };
 }
 
 export async function fetchProductList(): Promise<Product[]> {

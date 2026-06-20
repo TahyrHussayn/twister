@@ -2,7 +2,6 @@ import { Link } from "react-router";
 import { useState } from "react";
 import { createMetrics } from "~/lib/metrics";
 import { STRATEGY_ACCENTS } from "~/lib/theme";
-import type { Route } from "./+types/dashboard";
 import { CacheBadge } from "~/components/metrics-badge";
 
 export function meta() {
@@ -99,7 +98,7 @@ type BenchResult = {
   error?: string;
 };
 
-export default function Dashboard({ loaderData }: Route.ComponentProps) {
+export default function Dashboard() {
   const [results, setResults] = useState<BenchResult[] | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -130,7 +129,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     <div className="space-y-16 pb-16 pt-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Sleek Hero Section */}
       <header className="text-center max-w-4xl mx-auto px-4">
-        <h1 className="text-6xl sm:text-7xl font-extrabold tracking-tighter mb-4">
+        <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tighter mb-4">
           <span
             className="text-transparent bg-clip-text"
             style={{
@@ -143,7 +142,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
             Twister
           </span>
         </h1>
-        <p className="text-xl sm:text-2xl text-zinc-500 dark:text-zinc-400 font-medium tracking-tight">
+        <p className="text-lg sm:text-xl md:text-2xl text-zinc-500 dark:text-zinc-400 font-medium tracking-tight">
           Web Rendering Strategies, Visualized.
         </p>
       </header>

@@ -80,8 +80,8 @@ export function Nav() {
       </div>
 
       {open && (
-        <div className="md:hidden border-t border-zinc-800/60 bg-[#050505]/95 backdrop-blur-lg">
-          <div className="px-4 py-3 space-y-1 max-w-7xl mx-auto">
+        <div className="md:hidden absolute top-full left-0 right-0 border-b border-zinc-800/60 bg-[#050505]/95 backdrop-blur-lg shadow-xl shadow-black/50">
+          <div className="px-4 py-3 space-y-1 max-w-7xl mx-auto max-h-[calc(100vh-3.5rem)] overflow-y-auto">
             {LINKS.map(({ to, label, key }) => {
               const accentColor = key !== "Dashboard" ? STRATEGY_ACCENTS[key]?.hex : undefined;
               return (
@@ -91,14 +91,16 @@ export function Nav() {
                   viewTransition
                   onClick={() => setOpen(false)}
                   className={({ isActive }) =>
-                    `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                      isActive ? "bg-white text-black" : "text-zinc-400 hover:bg-zinc-800"
+                    `px-3 py-3 rounded-lg text-sm font-medium transition-colors flex items-center gap-3 ${
+                      isActive
+                        ? "bg-white text-black"
+                        : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
                     }`
                   }
                 >
                   {accentColor && (
                     <span
-                      className="w-1.5 h-1.5 rounded-full inline-block"
+                      className="w-2 h-2 rounded-full inline-block"
                       style={{
                         backgroundColor: accentColor,
                         boxShadow: `0 0 8px ${accentColor}80`,

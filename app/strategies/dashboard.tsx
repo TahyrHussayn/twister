@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { useState } from "react";
 import { createMetrics } from "~/lib/metrics";
+import { STRATEGY_ACCENTS } from "~/lib/theme";
 
 export function meta() {
   return [
@@ -162,6 +163,9 @@ export default function Dashboard() {
         {results && (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
+              <caption className="sr-only">
+                Benchmark results comparing rendering strategy performance
+              </caption>
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-zinc-800">
                   <th className="px-4 py-2 text-left text-xs font-semibold">Strategy</th>
@@ -181,7 +185,7 @@ export default function Dashboard() {
                           to={r.url}
                           viewTransition
                           className="font-medium text-sm hover:underline"
-                          style={{ color: getAccent(r.strategy) }}
+                          style={{ color: STRATEGY_ACCENTS[r.strategy]?.hex ?? "#71717a" }}
                         >
                           {r.strategy}
                         </Link>
@@ -313,25 +317,4 @@ export default function Dashboard() {
       </div>
     </div>
   );
-}
-
-function getAccent(strat: string): string {
-  switch (strat) {
-    case "SSR":
-      return "#2563eb";
-    case "CSR":
-      return "#7c3aed";
-    case "SSG":
-      return "#059669";
-    case "Streaming":
-      return "#0891b2";
-    case "ISR":
-      return "#d97706";
-    case "PPR":
-      return "#db2777";
-    case "Islands":
-      return "#0d9488";
-    default:
-      return "#71717a";
-  }
 }

@@ -7,7 +7,14 @@ import { ComparisonPanel } from "~/components/comparison-panel";
 import { StrategyPage, SectionDivider } from "~/components/strategy-page";
 
 export function meta() {
-  return [{ title: "Islands — React Islands Architecture" }];
+  return [
+    { title: "Islands — React Islands Architecture" },
+    {
+      name: "description",
+      content:
+        "React Islands Architecture demo: independent interactive components hydrate on their own, shipping minimal JS without blocking other content.",
+    },
+  ];
 }
 
 export async function loader() {
@@ -139,11 +146,14 @@ function ClockIsland() {
 }
 
 function CommentsIsland() {
-  const [comments, setComments] = useState(["Great architecture!", "Islands are the future"]);
+  const [comments, setComments] = useState<{ id: string; text: string }[]>([
+    { id: "1", text: "Great architecture!" },
+    { id: "2", text: "Islands are the future" },
+  ]);
   const [input, setInput] = useState("");
   const add = () => {
     if (input.trim()) {
-      setComments((c) => [...c, input]);
+      setComments((c) => [...c, { id: Date.now().toString(36), text: input }]);
       setInput("");
     }
   };
@@ -153,12 +163,12 @@ function CommentsIsland() {
         🏝️ Comments
       </p>
       <div className="space-y-1.5 mb-3 max-h-28 overflow-y-auto text-xs">
-        {[...comments].reverse().map((c, i) => (
+        {[...comments].reverse().map((c) => (
           <p
-            key={i}
+            key={c.id}
             className="border-b border-zinc-50 dark:border-zinc-800 pb-1 text-zinc-600 dark:text-zinc-400"
           >
-            {c}
+            {c.text}
           </p>
         ))}
       </div>

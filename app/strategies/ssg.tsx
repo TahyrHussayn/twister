@@ -6,7 +6,14 @@ import { ComparisonPanel } from "~/components/comparison-panel";
 import { StrategyPage, SectionDivider } from "~/components/strategy-page";
 
 export function meta() {
-  return [{ title: "SSG — Static Site Generation" }];
+  return [
+    { title: "SSG — Static Site Generation" },
+    {
+      name: "description",
+      content:
+        "Static Site Generation demo: pre-rendered at build time, served instantly from the edge with zero server-side computation.",
+    },
+  ];
 }
 
 export async function loader() {

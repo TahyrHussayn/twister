@@ -8,7 +8,14 @@ import { CardSkeleton } from "~/components/skeleton";
 import { StrategyPage, SectionDivider } from "~/components/strategy-page";
 
 export function meta() {
-  return [{ title: "PPR — Partial Prerendering" }];
+  return [
+    { title: "PPR — Partial Prerendering" },
+    {
+      name: "description",
+      content:
+        "Partial Prerendering demo: static HTML shell baked at build time with dynamic client-side holes that load progressively after hydration.",
+    },
+  ];
 }
 
 export async function loader() {
@@ -118,7 +125,11 @@ function DynamicRecs() {
         </div>
       ) : (
         <div className="flex items-center justify-center py-8">
-          <div className="animate-spin h-5 w-5 border-2 border-pink-500 border-t-transparent rounded-full" />
+          <div
+            role="status"
+            aria-label="Loading"
+            className="animate-spin h-5 w-5 border-2 border-pink-500 border-t-transparent rounded-full"
+          />
         </div>
       )}
     </section>
@@ -143,7 +154,11 @@ function DynamicTimestamp() {
         <code className="text-sm font-mono text-pink-600 dark:text-pink-400">{ts}</code>
       ) : (
         <div className="flex items-center justify-center py-4">
-          <div className="animate-spin h-4 w-4 border-2 border-pink-500 border-t-transparent rounded-full" />
+          <div
+            role="status"
+            aria-label="Loading"
+            className="animate-spin h-4 w-4 border-2 border-pink-500 border-t-transparent rounded-full"
+          />
         </div>
       )}
       <p className="text-[10px] text-zinc-400 mt-3">

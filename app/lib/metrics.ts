@@ -16,11 +16,3 @@ export function createMetrics(strategy: string): RenderMetrics {
     strategy,
   };
 }
-
-export function serverTimingHeader(metrics: RenderMetrics): Record<string, string> {
-  return {
-    "Server-Timing": `ttfb;dur=${metrics.ttfb};desc="Time to First Byte", server;dur=${metrics.serverTime};desc="Server Render Time"`,
-    "X-Render-Strategy": metrics.strategy,
-    "X-Rendered-At": metrics.renderedAt,
-  };
-}

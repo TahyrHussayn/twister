@@ -12,7 +12,14 @@ import { ComparisonPanel } from "~/components/comparison-panel";
 import { StrategyPage, SectionDivider } from "~/components/strategy-page";
 
 export function meta() {
-  return [{ title: "SSR — Server-Side Rendering on the Edge" }];
+  return [
+    { title: "SSR — Server-Side Rendering on the Edge" },
+    {
+      name: "description",
+      content:
+        "Server-Side Rendering demo: HTML rendered per-request on Cloudflare Workers with parallel data fetching at the edge.",
+    },
+  ];
 }
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
   return loaderHeaders;

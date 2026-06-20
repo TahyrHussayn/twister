@@ -1,4 +1,4 @@
-import { useState } from "react";
+import type { Route } from "./+types/csr";
 import { createMetrics } from "~/lib/metrics";
 import { CodeSnippet } from "~/components/code-snippet";
 import { ComparisonPanel } from "~/components/comparison-panel";
@@ -6,7 +6,14 @@ import { CardSkeleton } from "~/components/skeleton";
 import { StrategyPage, SectionDivider } from "~/components/strategy-page";
 
 export function meta() {
-  return [{ title: "CSR — Client-Side Rendering" }];
+  return [
+    { title: "CSR — Client-Side Rendering" },
+    {
+      name: "description",
+      content:
+        "Live CSR demo: minimal HTML shell with data fetched entirely in the browser via clientLoader",
+    },
+  ];
 }
 
 type ClientData = {
@@ -25,11 +32,14 @@ async function fetchClientData(): Promise<ClientData> {
   };
 }
 
-let _hydrated = false;
+export async function loader() {
+  return { metrics: createMetrics("CSR") };
+}
 
-export async function clientLoader() {
-  _hydrated = true;
-  return fetchClientData();
+export async function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
+  const serverData = await serverLoader();
+  const clientData = await fetchClientData();
+  return { ...serverData, ...clientData };
 }
 clientLoader.hydrate = true as const;
 
@@ -51,16 +61,10 @@ export function HydrateFallback() {
   );
 }
 
-export async function loader() {
-  return { metrics: createMetrics("CSR") };
-}
-
-export default function CSR() {
-  const [data, setData] = useState<ClientData | null>(null);
-  const metrics = createMetrics("CSR");
-  if (!_hydrated) {
-    void fetchClientData().then(setData);
-  }
+export default function CSR({ loaderData }: Route.ComponentProps) {
+  const { metrics, message, items, timestamp } = loaderData as ClientData & {
+    metrics: ReturnType<typeof createMetrics>;
+  };
 
   return (
     <StrategyPage
@@ -92,37 +96,26 @@ export default function CSR() {
       <CodeSnippet code={CSR_CODE} filename="app/strategies/csr.tsx" strategy="CSR" />
 
       <SectionDivider label="Live demo" />
-
-      {data ? (
-        <>
+      <div
+        className="rounded-xl border p-4 text-sm"
+        style={{ backgroundColor: "var(--s-bg)", borderColor: "var(--s-border)" }}
+      >
+        <span style={{ color: "var(--s-text)" }}>{message}</span>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((item) => (
           <div
-            className="rounded-xl border p-4 text-sm"
-            style={{ backgroundColor: "var(--s-bg)", borderColor: "var(--s-border)" }}
+            key={item.id}
+            className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 card-hover"
           >
-            <span style={{ color: "var(--s-text)" }}>{data.message}</span>
+            <h3 className="font-semibold text-sm mb-2 capitalize">{item.title}</h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-3">{item.body}</p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {data.items.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 card-hover"
-              >
-                <h3 className="font-semibold text-sm mb-2 capitalize">{item.title}</h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-3">{item.body}</p>
-              </div>
-            ))}
-          </div>
-          <p className="text-center text-[11px] font-mono text-zinc-400">
-            Client fetch completed: {data.timestamp}
-          </p>
-        </>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <CardSkeleton key={i} />
-          ))}
-        </div>
-      )}
+        ))}
+      </div>
+      <p className="text-center text-[11px] font-mono text-zinc-400">
+        Client fetch completed: {timestamp}
+      </p>
 
       <SectionDivider label="When to use it" />
       <ComparisonPanel
@@ -138,8 +131,10 @@ export default function CSR() {
   );
 }
 
-const CSR_CODE = `export async function clientLoader() {
-  return fetchClientData();
+const CSR_CODE = `export async function clientLoader({ serverLoader }) {
+  const serverData = await serverLoader();
+  const clientData = await fetchClientData();
+  return { ...serverData, ...clientData };
 }
 clientLoader.hydrate = true as const;
 

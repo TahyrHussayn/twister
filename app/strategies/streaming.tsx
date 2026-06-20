@@ -14,7 +14,14 @@ import { CardSkeleton, TextSkeleton } from "~/components/skeleton";
 import { StrategyPage, SectionDivider } from "~/components/strategy-page";
 
 export function meta() {
-  return [{ title: "Streaming — Progressive SSR with Suspense" }];
+  return [
+    { title: "Streaming — Progressive SSR with Suspense" },
+    {
+      name: "description",
+      content:
+        "Streaming SSR demo: HTML streams progressively with React Suspense — each section resolves independently without blocking the full page.",
+    },
+  ];
 }
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
   return loaderHeaders;

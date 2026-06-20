@@ -19,7 +19,7 @@ export function CodeSnippet({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const accent = ACCENTS[strategy ?? "default"];
+  const accent = STRATEGY_ACCENTS[strategy ?? ""]?.hex ?? "#71717a";
 
   return (
     <div
@@ -55,13 +55,4 @@ export function CodeSnippet({
   );
 }
 
-const ACCENTS: Record<string, string> = {
-  SSR: "#2563eb",
-  CSR: "#7c3aed",
-  SSG: "#059669",
-  Streaming: "#0891b2",
-  ISR: "#d97706",
-  PPR: "#db2777",
-  Islands: "#0d9488",
-  default: "#71717a",
-};
+import { STRATEGY_ACCENTS } from "~/lib/theme";

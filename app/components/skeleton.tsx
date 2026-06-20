@@ -44,12 +44,3 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
     </div>
   );
 }
-
-export function HeroSkeleton() {
-  return (
-    <div className="text-center py-10 space-y-4" role="status" aria-label="Loading">
-      <div className="h-10 rounded shimmer w-80 mx-auto" />
-      <div className="h-5 rounded shimmer w-96 mx-auto" />
-    </div>
-  );
-}

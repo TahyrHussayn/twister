@@ -6,7 +6,12 @@ const requestHandler = createRequestHandler(
 );
 
 export default {
-  async fetch(request) {
-    return requestHandler(request);
+  async fetch(request: Request) {
+    try {
+      return await requestHandler(request);
+    } catch (e) {
+      console.error("Worker request failed:", e instanceof Error ? e.message : String(e));
+      return new Response("Internal Server Error", { status: 500 });
+    }
   },
 } satisfies ExportedHandler<Env>;

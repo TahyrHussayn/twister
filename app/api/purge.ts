@@ -4,30 +4,14 @@ import { purgeCacheEntry } from "~/lib/cache";
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
   const url = formData.get("url") as string;
-  const tag = formData.get("tag") as string;
-
-  const results: string[] = [];
+  const redirectTo = (formData.get("redirect") as string) || "/";
 
   if (url) {
-    const purged = await purgeCacheEntry(new Request(new URL(url, request.url)));
-    results.push(`URL "${url}": ${purged ? "purged" : "not found in cache"}`);
+    await purgeCacheEntry(new Request(new URL(url, request.url)));
   }
-
-  if (tag) {
-    results.push(`Tag "${tag}": purge requested (per-datacenter)`);
-  }
-
-  if (results.length === 0) {
-    return new Response("No URL or tag provided", { status: 400 });
-  }
-
-  const redirectTo = (formData.get("redirect") as string) || "/";
 
   return new Response(null, {
     status: 302,
-    headers: {
-      Location: redirectTo,
-      "X-Cache-Purge": JSON.stringify(results),
-    },
+    headers: { Location: `${redirectTo}?purged=${Date.now()}` },
   });
 }

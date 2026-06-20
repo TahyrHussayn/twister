@@ -2,9 +2,9 @@ import { Suspense, useState, useEffect } from "react";
 import type { Route } from "./+types/islands";
 import { fetchUserProfile, fetchServerTimestamp } from "~/lib/data";
 import { createMetrics } from "~/lib/metrics";
-import { MetricsBar } from "~/components/metrics-badge";
 import { CodeSnippet } from "~/components/code-snippet";
 import { ComparisonPanel } from "~/components/comparison-panel";
+import { StrategyPage, SectionDivider } from "~/components/strategy-page";
 
 export function meta() {
   return [{ title: "Islands — React Islands Architecture" }];
@@ -22,22 +22,26 @@ export default function Islands({ loaderData }: Route.ComponentProps) {
   const { profile, timestamp, metrics } = loaderData;
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <header>
-        <h1 className="text-3xl font-bold mb-1">🏝️ React Islands Architecture</h1>
-        <MetricsBar metrics={metrics} />
-        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed">
-          The page is standard SSR. But each interactive component below is an independent "island"
-          — it hydrates on its own, ships only its JS, and doesn't block other islands.
-        </p>
-        <div className="mt-4 p-4 rounded-xl border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950 text-sm">
-          <p className="text-teal-700 dark:text-teal-300 font-mono text-xs">
-            Each island hydrates independently. No shared state. Minimal JS per component.
-          </p>
-        </div>
-      </header>
+    <StrategyPage
+      strategy="islands"
+      emoji="🏝️"
+      title="React Islands Architecture"
+      metrics={metrics}
+      description="The page is standard SSR. Each interactive component below is an independent island — it hydrates on its own, ships only its JS, and doesn't block other islands. Static content renders immediately from the server."
+    >
+      <SectionDivider label="How it works" />
+      <CodeSnippet code={CODE} filename="app/strategies/islands.tsx" strategy="Islands" />
 
-      <CodeSnippet code={ISLANDS_CODE} filename="app/strategies/islands.tsx" strategy="Islands" />
+      <div
+        className="rounded-xl border p-4 text-sm"
+        style={{ backgroundColor: "var(--s-bg)", borderColor: "var(--s-border)" }}
+      >
+        <p className="font-mono text-xs" style={{ color: "var(--s-text)" }}>
+          Each island hydrates independently. No shared state. Minimal JS per component.
+        </p>
+      </div>
+
+      <SectionDivider label="Live demo — 6 independent islands" />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Suspense fallback={<SpinnerShell title="Like Button" />}>
@@ -75,6 +79,7 @@ export default function Islands({ loaderData }: Route.ComponentProps) {
         Server timestamp: {timestamp} · Each island ships its own JS bundle
       </p>
 
+      <SectionDivider label="When to use it" />
       <ComparisonPanel
         pros={["Minimal JS shipped", "Independent hydration", "Excellent performance"]}
         cons={["Not for app-like UIs", "Cross-island communication hard", "Tooling still emerging"]}
@@ -84,7 +89,7 @@ export default function Islands({ loaderData }: Route.ComponentProps) {
           { to: "/streaming", label: "Streaming", emoji: "🌊" },
         ]}
       />
-    </div>
+    </StrategyPage>
   );
 }
 
@@ -260,10 +265,10 @@ function ThemeIsland() {
   );
 }
 
-const ISLANDS_CODE = `// Each island is a self-contained component
+const CODE = `// Each island is a self-contained component
 function LikeButton() {
   const [likes, setLikes] = useState(42);
-  return <button onClick={() => setLikes(l=>l+1)}>
+  return <button onClick={() => setLikes(l => l + 1)}>
     ❤️ {likes}
   </button>;
 }

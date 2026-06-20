@@ -1,9 +1,9 @@
 import type { Route } from "./+types/ssg";
 import { fetchUserProfile, fetchServerTimestamp } from "~/lib/data";
 import { createMetrics } from "~/lib/metrics";
-import { MetricsBar } from "~/components/metrics-badge";
 import { CodeSnippet } from "~/components/code-snippet";
 import { ComparisonPanel } from "~/components/comparison-panel";
+import { StrategyPage, SectionDivider } from "~/components/strategy-page";
 
 export function meta() {
   return [{ title: "SSG — Static Site Generation" }];
@@ -18,22 +18,32 @@ export default function SSG({ loaderData }: Route.ComponentProps) {
   const { profile, buildTimestamp, metrics } = loaderData;
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <header>
-        <h1 className="text-3xl font-bold mb-1">🏗️ Static Site Generation</h1>
-        <MetricsBar metrics={metrics} />
-        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed">
-          This page was pre-rendered at <strong>build time</strong>. The HTML is static, served
-          instantly from the edge with zero server-side computation.
-        </p>
-        <div className="mt-4 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950 text-sm">
-          <p className="text-emerald-700 dark:text-emerald-300 font-mono text-xs">
-            Data frozen at build time — this page will not update until the next build.
-          </p>
-        </div>
-      </header>
-
+    <StrategyPage
+      strategy="ssg"
+      emoji="🏗️"
+      title="Static Site Generation"
+      metrics={metrics}
+      description={
+        <>
+          This page was pre-rendered at <strong>build time</strong>. The HTML is static — served
+          instantly from the edge with zero server-side computation. The data is baked into the HTML
+          when the build runs.
+        </>
+      }
+    >
+      <SectionDivider label="How it works" />
       <CodeSnippet code={SSG_CODE} filename="app/strategies/ssg.tsx" strategy="SSG" />
+
+      <div
+        className="rounded-xl border p-4 text-sm"
+        style={{ backgroundColor: "var(--s-bg)", borderColor: "var(--s-border)" }}
+      >
+        <p className="font-mono text-xs" style={{ color: "var(--s-text)" }}>
+          Data frozen at build time — this page will not update until the next build.
+        </p>
+      </div>
+
+      <SectionDivider label="Live demo" />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 card-hover">
@@ -52,7 +62,7 @@ export default function SSG({ loaderData }: Route.ComponentProps) {
           <div className="space-y-4">
             <div>
               <p className="text-[10px] text-zinc-400 uppercase tracking-wider">Build Time</p>
-              <code className="text-xs font-mono text-emerald-600 dark:text-emerald-400">
+              <code className="text-xs font-mono" style={{ color: "var(--s-accent)" }}>
                 {buildTimestamp}
               </code>
             </div>
@@ -64,10 +74,7 @@ export default function SSG({ loaderData }: Route.ComponentProps) {
         </section>
       </div>
 
-      <p className="text-center text-[11px] font-mono text-zinc-400">
-        Configured via <code>prerender</code> in react-router.config.ts
-      </p>
-
+      <SectionDivider label="When to use it" />
       <ComparisonPanel
         pros={["Near-instant TTFB", "Perfect SEO", "Zero runtime compute cost"]}
         cons={["Data can be stale", "Must rebuild to update", "Not for dynamic data"]}
@@ -77,14 +84,13 @@ export default function SSG({ loaderData }: Route.ComponentProps) {
           { to: "/streaming", label: "Streaming", emoji: "🌊" },
         ]}
       />
-    </div>
+    </StrategyPage>
   );
 }
 
 const SSG_CODE = `// react-router.config.ts
 export default {
   prerender: ["/ssg", "/ppr"],
-  ssr: true,
 } satisfies Config;
 
 // app/strategies/ssg.tsx

@@ -8,10 +8,10 @@ import {
   fetchServerTimestamp,
 } from "~/lib/data";
 import { createMetrics } from "~/lib/metrics";
-import { MetricsBar } from "~/components/metrics-badge";
 import { CodeSnippet } from "~/components/code-snippet";
 import { ComparisonPanel } from "~/components/comparison-panel";
 import { CardSkeleton, TextSkeleton } from "~/components/skeleton";
+import { StrategyPage, SectionDivider } from "~/components/strategy-page";
 
 export function meta() {
   return [{ title: "Streaming — Progressive SSR with Suspense" }];
@@ -35,21 +35,17 @@ export default function Streaming({ loaderData }: Route.ComponentProps) {
   const { profile, analytics, recommendations, activities, timestamp, metrics } = loaderData;
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <header>
-        <h1 className="text-3xl font-bold mb-1">🌊 Streaming SSR</h1>
-        <MetricsBar metrics={metrics} />
-        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed">
-          HTML streams progressively. Each section resolves independently — the shell renders
-          instantly and data flows in as each promise resolves.
-        </p>
-      </header>
+    <StrategyPage
+      strategy="streaming"
+      emoji="🌊"
+      title="Streaming SSR"
+      metrics={metrics}
+      description="HTML streams progressively. Each section resolves independently — the shell renders instantly and data flows in as each promise resolves. No single slow query blocks the entire page."
+    >
+      <SectionDivider label="How it works" />
+      <CodeSnippet code={CODE} filename="app/strategies/streaming.tsx" strategy="Streaming" />
 
-      <CodeSnippet
-        code={STREAMING_CODE}
-        filename="app/strategies/streaming.tsx"
-        strategy="Streaming"
-      />
+      <SectionDivider label="Live demo" />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Suspense fallback={<CardSkeleton />}>
@@ -59,11 +55,9 @@ export default function Streaming({ loaderData }: Route.ComponentProps) {
           <AnalyticsSection promise={analytics} />
         </Suspense>
       </div>
-
       <Suspense fallback={<CardSkeleton />}>
         <RecsSection promise={recommendations} />
       </Suspense>
-
       <Suspense
         fallback={
           <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
@@ -79,6 +73,7 @@ export default function Streaming({ loaderData }: Route.ComponentProps) {
         Shell rendered at edge: {timestamp}
       </p>
 
+      <SectionDivider label="When to use it" />
       <ComparisonPanel
         pros={["No data waterfalls", "Great perceived performance", "Critical content first"]}
         cons={["More complex to build", "Requires Suspense", "Not all frameworks support it"]}
@@ -88,7 +83,7 @@ export default function Streaming({ loaderData }: Route.ComponentProps) {
           { to: "/islands", label: "Islands", emoji: "🏝️" },
         ]}
       />
-    </div>
+    </StrategyPage>
   );
 }
 
@@ -128,7 +123,7 @@ function AnalyticsSection({ promise }: { promise: ReturnType<typeof fetchAnalyti
           <p className="text-xl font-bold font-mono">{a.avgSessionDuration}s</p>
         </div>
         <div>
-          <p className="text-[10px] text-zinc-400 uppercase tracking-wider">Bounce Rate</p>
+          <p className="text-[10px] text-zinc-400 uppercase tracking-wider">Bounce</p>
           <p className="text-xl font-bold font-mono">{(a.bounceRate * 100).toFixed(0)}%</p>
         </div>
       </div>
@@ -183,7 +178,7 @@ function ActivitySection({ promise }: { promise: ReturnType<typeof fetchActivity
   );
 }
 
-const STREAMING_CODE = `export async function loader() {
+const CODE = `export async function loader() {
   return {
     profile: fetchUserProfile(500),
     analytics: fetchAnalytics(1000),
@@ -192,15 +187,7 @@ const STREAMING_CODE = `export async function loader() {
   };
 }
 
-export default function Page({ loaderData }) {
-  return (
-    <>
-      <Suspense fallback={<Skeleton />}>
-        <Profile promise={loaderData.profile} />
-      </Suspense>
-      <Suspense fallback={<Skeleton />}>
-        <Analytics promise={loaderData.analytics} />
-      </Suspense>
-    </>
-  );
-}`;
+// Component — each section with Suspense
+<Suspense fallback={<Skeleton />}>
+  <Profile promise={loaderData.profile} />
+</Suspense>`;

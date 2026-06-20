@@ -18,7 +18,7 @@ body {
   }
 }
 
-/* View Transitions */
+/* ── Animations ── */
 @keyframes vt-fade-in {
   from {
     opacity: 0;
@@ -44,16 +44,6 @@ body {
 }
 ::view-transition-new(root) {
   animation: vt-fade-in 0.18s ease-out;
-}
-
-/* Shimmer skeleton */
-@keyframes shimmer {
-  0% {
-    background-position: -400px 0;
-  }
-  100% {
-    background-position: 400px 0;
-  }
 }
 @keyframes fade-in {
   from {
@@ -91,7 +81,15 @@ body {
   animation: scale-in 0.25s ease-out both;
 }
 
-/* Shimmer base */
+/* ── Shimmer skeleton ── */
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
 .shimmer {
   background: linear-gradient(
     90deg,
@@ -113,42 +111,137 @@ body {
   background-size: 400% 100%;
 }
 
-/* Strategy accent border gradients */
-.strategy-border-ssr {
-  @apply border-blue-200 dark:border-blue-900;
-}
-.strategy-border-csr {
-  @apply border-purple-200 dark:border-purple-900;
-}
-.strategy-border-ssg {
-  @apply border-emerald-200 dark:border-emerald-900;
-}
-.strategy-border-streaming {
-  @apply border-cyan-200 dark:border-cyan-900;
-}
-.strategy-border-isr {
-  @apply border-amber-200 dark:border-amber-900;
-}
-.strategy-border-ppr {
-  @apply border-pink-200 dark:border-pink-900;
-}
-.strategy-border-islands {
-  @apply border-teal-200 dark:border-teal-900;
-}
-
-/* Card hover effect */
+/* ── Card hover ── */
 .card-hover {
   @apply transition-all duration-200;
 }
 .card-hover:hover {
-  @apply -translate-y-0.5 shadow-lg;
-  border-color: var(--card-accent, theme("colors.zinc.300"));
-}
-.dark .card-hover:hover {
-  border-color: var(--card-accent, theme("colors.zinc.600"));
+  @apply -translate-y-0.5 shadow-md border-zinc-300 dark:border-zinc-600;
 }
 
-/* Glass nav */
-.glass {
-  @apply bg-white/80 dark:bg-zinc-950/80 backdrop-blur-lg border-b border-zinc-200/60 dark:border-zinc-800/60;
+/* ── Glass nav ── */
+.glass-nav {
+  @apply sticky top-0 z-50 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-lg border-b border-zinc-200/60 dark:border-zinc-800/60;
+}
+
+/* ── Strategy accent tokens ── */
+.strat-ssr {
+  --s-bg: #eff6ff;
+  --s-border: #bfdbfe;
+  --s-text: #1d4ed8;
+  --s-accent: #2563eb;
+  --s-ring: #bfdbfe;
+}
+.dark .strat-ssr {
+  --s-bg: #172554;
+  --s-border: #1e3a5f;
+  --s-text: #93c5fd;
+  --s-accent: #60a5fa;
+  --s-ring: #1e3a5f;
+}
+
+.strat-csr {
+  --s-bg: #faf5ff;
+  --s-border: #e9d5ff;
+  --s-text: #6d28d9;
+  --s-accent: #7c3aed;
+  --s-ring: #e9d5ff;
+}
+.dark .strat-csr {
+  --s-bg: #2e1065;
+  --s-border: #4c1d95;
+  --s-text: #c4b5fd;
+  --s-accent: #a78bfa;
+  --s-ring: #4c1d95;
+}
+
+.strat-ssg {
+  --s-bg: #ecfdf5;
+  --s-border: #a7f3d0;
+  --s-text: #047857;
+  --s-accent: #059669;
+  --s-ring: #a7f3d0;
+}
+.dark .strat-ssg {
+  --s-bg: #022c22;
+  --s-border: #064e3b;
+  --s-text: #6ee7b7;
+  --s-accent: #34d399;
+  --s-ring: #064e3b;
+}
+
+.strat-streaming {
+  --s-bg: #ecfeff;
+  --s-border: #a5f3fc;
+  --s-text: #0e7490;
+  --s-accent: #0891b2;
+  --s-ring: #a5f3fc;
+}
+.dark .strat-streaming {
+  --s-bg: #083344;
+  --s-border: #155e75;
+  --s-text: #67e8f9;
+  --s-accent: #22d3ee;
+  --s-ring: #155e75;
+}
+
+.strat-isr {
+  --s-bg: #fffbeb;
+  --s-border: #fde68a;
+  --s-text: #b45309;
+  --s-accent: #d97706;
+  --s-ring: #fde68a;
+}
+.dark .strat-isr {
+  --s-bg: #451a03;
+  --s-border: #78350f;
+  --s-text: #fcd34d;
+  --s-accent: #f59e0b;
+  --s-ring: #78350f;
+}
+
+.strat-ppr {
+  --s-bg: #fdf2f8;
+  --s-border: #fbcfe8;
+  --s-text: #be185d;
+  --s-accent: #db2777;
+  --s-ring: #fbcfe8;
+}
+.dark .strat-ppr {
+  --s-bg: #4a0e2b;
+  --s-border: #831843;
+  --s-text: #f9a8d4;
+  --s-accent: #f472b6;
+  --s-ring: #831843;
+}
+
+.strat-islands {
+  --s-bg: #f0fdfa;
+  --s-border: #99f6e4;
+  --s-text: #0f766e;
+  --s-accent: #0d9488;
+  --s-ring: #99f6e4;
+}
+.dark .strat-islands {
+  --s-bg: #042f2e;
+  --s-border: #115e59;
+  --s-text: #5eead4;
+  --s-accent: #2dd4bf;
+  --s-ring: #115e59;
+}
+
+/* Section divider */
+.section-divider {
+  @apply flex items-center gap-3 py-2;
+}
+.section-divider::before {
+  content: "";
+  @apply flex-1 h-px bg-zinc-200 dark:bg-zinc-800;
+}
+.section-divider::after {
+  content: "";
+  @apply flex-1 h-px bg-zinc-200 dark:bg-zinc-800;
+}
+.section-divider-label {
+  @apply text-xs font-semibold uppercase tracking-widest text-zinc-400;
 }

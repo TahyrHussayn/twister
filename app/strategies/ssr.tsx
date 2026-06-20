@@ -7,9 +7,9 @@ import {
   fetchServerTimestamp,
 } from "~/lib/data";
 import { createMetrics } from "~/lib/metrics";
-import { MetricsBar } from "~/components/metrics-badge";
 import { CodeSnippet } from "~/components/code-snippet";
 import { ComparisonPanel } from "~/components/comparison-panel";
+import { StrategyPage, SectionDivider } from "~/components/strategy-page";
 
 export function meta() {
   return [{ title: "SSR — Server-Side Rendering on the Edge" }];
@@ -39,23 +39,34 @@ export default function SSR({ loaderData }: Route.ComponentProps) {
   const { profile, activities, analytics, timestamp, metrics, serverMessage } = loaderData;
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <header>
-        <h1 className="text-3xl font-bold mb-1">⚡ Server-Side Rendering</h1>
-        <MetricsBar metrics={metrics} />
-        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed">
-          HTML is rendered per-request on a Cloudflare Worker. All data fetches run at the edge
-          before streaming to the browser.
-        </p>
-        <div className="mt-4 p-4 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 text-sm">
-          <span className="text-blue-600 dark:text-blue-400 font-mono">{serverMessage}</span>
-          <span className="block mt-1 text-xs text-blue-500 dark:text-blue-400/70">
-            Env var from wrangler.jsonc
-          </span>
-        </div>
-      </header>
-
+    <StrategyPage
+      strategy="ssr"
+      emoji="⚡"
+      title="Server-Side Rendering"
+      metrics={metrics}
+      description={
+        <>
+          HTML is rendered per-request on a Cloudflare Worker. All data fetches run at the edge in
+          parallel before streaming to the browser — no client-side waterfalls.
+        </>
+      }
+    >
+      <SectionDivider label="How it works" />
       <CodeSnippet code={SSR_CODE} filename="app/strategies/ssr.tsx" strategy="SSR" />
+
+      <div
+        className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 text-sm"
+        style={{ backgroundColor: "var(--s-bg)", borderColor: "var(--s-border)" }}
+      >
+        <span className="font-mono text-xs" style={{ color: "var(--s-text)" }}>
+          {serverMessage}
+        </span>
+        <span className="block mt-1 text-xs opacity-70" style={{ color: "var(--s-text)" }}>
+          Env var from wrangler.jsonc
+        </span>
+      </div>
+
+      <SectionDivider label="Live demo" />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 card-hover">
@@ -115,6 +126,7 @@ export default function SSR({ loaderData }: Route.ComponentProps) {
 
       <p className="text-center text-[11px] font-mono text-zinc-400">Edge timestamp: {timestamp}</p>
 
+      <SectionDivider label="When to use it" />
       <ComparisonPanel
         pros={["Always fresh data", "SEO-friendly", "Personalized content per request"]}
         cons={["Higher server cost", "Slower TTFB than static", "Cold starts possible"]}
@@ -124,7 +136,7 @@ export default function SSR({ loaderData }: Route.ComponentProps) {
           { to: "/streaming", label: "Streaming", emoji: "🌊" },
         ]}
       />
-    </div>
+    </StrategyPage>
   );
 }
 

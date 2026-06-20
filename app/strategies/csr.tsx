@@ -1,9 +1,9 @@
+import { useState } from "react";
 import { createMetrics } from "~/lib/metrics";
-import { MetricsBar } from "~/components/metrics-badge";
 import { CodeSnippet } from "~/components/code-snippet";
 import { ComparisonPanel } from "~/components/comparison-panel";
 import { CardSkeleton } from "~/components/skeleton";
-import { useState } from "react";
+import { StrategyPage, SectionDivider } from "~/components/strategy-page";
 
 export function meta() {
   return [{ title: "CSR — Client-Side Rendering" }];
@@ -35,20 +35,19 @@ clientLoader.hydrate = true as const;
 
 export function HydrateFallback() {
   return (
-    <div className="space-y-8 animate-fade-in">
-      <header>
-        <h1 className="text-3xl font-bold mb-1">🖥️ Client-Side Rendering</h1>
-        <MetricsBar metrics={createMetrics("CSR")} />
-        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed">
-          The server sent a minimal HTML shell. Data is being fetched from the browser.
-        </p>
-      </header>
+    <StrategyPage
+      strategy="csr"
+      emoji="🖥️"
+      title="Client-Side Rendering"
+      metrics={createMetrics("CSR")}
+      description="The server sent a minimal HTML shell. Data is being fetched from the browser while you see this skeleton."
+    >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
           <CardSkeleton key={i} />
         ))}
       </div>
-    </div>
+    </StrategyPage>
   );
 }
 
@@ -64,29 +63,43 @@ export default function CSR() {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <header>
-        <h1 className="text-3xl font-bold mb-1">🖥️ Client-Side Rendering</h1>
-        <MetricsBar metrics={metrics} />
-        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed">
+    <StrategyPage
+      strategy="csr"
+      emoji="🖥️"
+      title="Client-Side Rendering"
+      metrics={metrics}
+      description={
+        <>
           A minimal HTML shell loads from the edge, then{" "}
-          <code className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/50 rounded text-xs font-mono text-purple-700 dark:text-purple-300">
+          <code
+            className="px-1 py-0.5 rounded text-xs font-mono"
+            style={{ backgroundColor: "var(--s-bg)", color: "var(--s-text)" }}
+          >
             clientLoader
           </code>{" "}
-          fetches data in the browser. A skeleton UI renders during{" "}
-          <code className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/50 rounded text-xs font-mono text-purple-700 dark:text-purple-300">
+          fetches data in the browser. A skeleton UI renders during the{" "}
+          <code
+            className="px-1 py-0.5 rounded text-xs font-mono"
+            style={{ backgroundColor: "var(--s-bg)", color: "var(--s-text)" }}
+          >
             HydrateFallback
-          </code>
-          .
-        </p>
-      </header>
-
+          </code>{" "}
+          phase.
+        </>
+      }
+    >
+      <SectionDivider label="How it works" />
       <CodeSnippet code={CSR_CODE} filename="app/strategies/csr.tsx" strategy="CSR" />
+
+      <SectionDivider label="Live demo" />
 
       {data ? (
         <>
-          <div className="p-4 rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950 text-sm text-purple-700 dark:text-purple-300">
-            {data.message}
+          <div
+            className="rounded-xl border p-4 text-sm"
+            style={{ backgroundColor: "var(--s-bg)", borderColor: "var(--s-border)" }}
+          >
+            <span style={{ color: "var(--s-text)" }}>{data.message}</span>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {data.items.map((item) => (
@@ -111,6 +124,7 @@ export default function CSR() {
         </div>
       )}
 
+      <SectionDivider label="When to use it" />
       <ComparisonPanel
         pros={["Fast subsequent navigations", "Rich interactivity", "Very low server load"]}
         cons={["Poor SEO by default", "Slow initial page load", "JavaScript required"]}
@@ -120,7 +134,7 @@ export default function CSR() {
           { to: "/islands", label: "Islands", emoji: "🏝️" },
         ]}
       />
-    </div>
+    </StrategyPage>
   );
 }
 

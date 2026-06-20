@@ -2,11 +2,11 @@ import { Suspense } from "react";
 import type { Route } from "./+types/isr";
 import { fetchProductList, fetchServerTimestamp } from "~/lib/data";
 import { createMetrics } from "~/lib/metrics";
-import { MetricsBar } from "~/components/metrics-badge";
 import { CodeSnippet } from "~/components/code-snippet";
 import { ComparisonPanel } from "~/components/comparison-panel";
 import { TableSkeleton } from "~/components/skeleton";
 import type { CacheStatus } from "~/lib/cache";
+import { StrategyPage, SectionDivider } from "~/components/strategy-page";
 
 export function meta() {
   return [{ title: "ISR — Incremental Static Regeneration" }];
@@ -15,7 +15,7 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
   return loaderHeaders;
 }
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader(_args: Route.LoaderArgs) {
   const products = await fetchProductList(300);
   const cacheStatus: CacheStatus = "DYNAMIC";
   return {
@@ -23,7 +23,6 @@ export async function loader({ request }: Route.LoaderArgs) {
     timestamp: fetchServerTimestamp(),
     metrics: createMetrics("ISR"),
     cacheStatus,
-    url: request.url,
   };
 }
 
@@ -31,42 +30,49 @@ export default function ISR({ loaderData }: Route.ComponentProps) {
   const { products, timestamp, metrics, cacheStatus } = loaderData;
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <header>
-        <h1 className="text-3xl font-bold mb-1">🔄 Incremental Static Regeneration</h1>
-        <MetricsBar metrics={metrics} cacheStatus={cacheStatus} />
-        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed">
+    <StrategyPage
+      strategy="isr"
+      emoji="🔄"
+      title="Incremental Static Regeneration"
+      metrics={metrics}
+      cacheStatus={cacheStatus}
+      description={
+        <>
           Uses{" "}
-          <code className="px-1 py-0.5 bg-amber-100 dark:bg-amber-900/50 rounded text-xs font-mono text-amber-700 dark:text-amber-300">
+          <code
+            className="px-1 py-0.5 rounded text-xs font-mono"
+            style={{ backgroundColor: "var(--s-bg)", color: "var(--s-text)" }}
+          >
             Cache-Control: s-maxage=60, stale-while-revalidate=3600
           </code>
-          . On first visit it renders and caches globally. After 60s the cache is stale — Cloudflare
-          serves the stale copy while regenerating in the background.
-        </p>
-      </header>
+          . First visit renders at the edge and caches globally. After 60s the cache goes stale —
+          Cloudflare serves the stale copy while regenerating in background.
+        </>
+      }
+    >
+      <SectionDivider label="How it works" />
+      <CodeSnippet code={CODE} filename="app/strategies/isr.tsx" strategy="ISR" />
 
-      <CodeSnippet code={ISR_CODE} filename="app/strategies/isr.tsx" strategy="ISR" />
-
+      <SectionDivider label="Cache controls" />
       <div className="grid gap-4 sm:grid-cols-3">
         <form
           method="post"
           action="/api/purge"
-          className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950 p-4"
+          className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4"
         >
-          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-2">
+          <p className="text-xs font-semibold mb-2" style={{ color: "var(--s-text)" }}>
             Purge Cache
           </p>
           <input type="hidden" name="url" value="/isr" />
           <input type="hidden" name="redirect" value="/isr" />
           <button
             type="submit"
-            className="w-full px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium transition-colors"
+            className="w-full px-4 py-2 rounded-lg text-white text-xs font-medium transition-colors hover:opacity-90"
+            style={{ backgroundColor: "var(--s-accent)" }}
           >
-            Purge /isr from Cache
+            Purge /isr
           </button>
-          <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-2">
-            Clears CDN cache, forces regeneration.
-          </p>
+          <p className="text-[10px] text-zinc-400 mt-2">Clears CDN cache, forces regeneration.</p>
         </form>
         <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
           <p className="text-xs font-semibold mb-2">Cache Strategy</p>
@@ -77,7 +83,9 @@ export default function ISR({ loaderData }: Route.ComponentProps) {
             </div>
             <div className="flex justify-between">
               <span className="text-zinc-500">stale-while-revalidate</span>
-              <code className="font-mono text-amber-600 dark:text-amber-400">3600s</code>
+              <code className="font-mono" style={{ color: "var(--s-text)" }}>
+                3600s
+              </code>
             </div>
             <div className="flex justify-between">
               <span className="text-zinc-500">Cache-Tag</span>
@@ -94,6 +102,7 @@ export default function ISR({ loaderData }: Route.ComponentProps) {
         </div>
       </div>
 
+      <SectionDivider label="Live demo" />
       <Suspense fallback={<TableSkeleton rows={5} />}>
         <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
           <div className="overflow-x-auto">
@@ -131,9 +140,10 @@ export default function ISR({ loaderData }: Route.ComponentProps) {
       </Suspense>
 
       <p className="text-center text-[11px] font-mono text-zinc-400">
-        Rendered at: {timestamp} · Cache-Control: max-age=60, stale-while-revalidate=3600
+        Rendered at: {timestamp} · s-maxage=60, stale-while-revalidate=3600
       </p>
 
+      <SectionDivider label="When to use it" />
       <ComparisonPanel
         pros={["Fast on cache hits", "Auto-revalidation", "Global edge distribution"]}
         cons={["First visit slower", "Stale data window", "Cache purge complexity"]}
@@ -143,16 +153,16 @@ export default function ISR({ loaderData }: Route.ComponentProps) {
           { to: "/ssr", label: "SSR", emoji: "⚡" },
         ]}
       />
-    </div>
+    </StrategyPage>
   );
 }
 
-const ISR_CODE = `export async function loader() {
+const CODE = `export async function loader() {
   const products = await fetchProductList();
   return { products };
 }
 
-// Sets headers in entry.server.tsx or route:
+// Response headers (via entry.server or route):
 // Cache-Control: public, max-age=60,
 //   stale-while-revalidate=3600
 // Cache-Tag: isr-products`;

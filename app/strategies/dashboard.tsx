@@ -1,8 +1,7 @@
 import { Link } from "react-router";
-import type { Route } from "./+types/dashboard";
 import { createMetrics } from "~/lib/metrics";
 
-export function meta(_args: Route.MetaArgs) {
+export function meta() {
   return [
     { title: "Twister — Rendering Strategies Compared" },
     {
@@ -12,7 +11,6 @@ export function meta(_args: Route.MetaArgs) {
     },
   ];
 }
-
 export function headers() {
   return { "Cache-Control": "public, max-age=30, s-maxage=30" };
 }
@@ -20,25 +18,24 @@ export function loader() {
   return { metrics: createMetrics("Dashboard") };
 }
 
-type StrategyColor = "blue" | "purple" | "emerald" | "cyan" | "amber" | "pink" | "teal";
-
-const COLOR_RING: Record<StrategyColor, string> = {
-  blue: "ring-blue-200 dark:ring-blue-800",
-  purple: "ring-purple-200 dark:ring-purple-800",
-  emerald: "ring-emerald-200 dark:ring-emerald-800",
-  cyan: "ring-cyan-200 dark:ring-cyan-800",
-  amber: "ring-amber-200 dark:ring-amber-800",
-  pink: "ring-pink-200 dark:ring-pink-800",
-  teal: "ring-teal-200 dark:ring-teal-800",
+type S = {
+  to: string;
+  emoji: string;
+  name: string;
+  label: string;
+  style: string;
+  desc: string;
+  pros: string[];
+  cons: string[];
 };
 
-const STRATEGIES = [
+const STRATEGIES: S[] = [
   {
     to: "/ssr",
     emoji: "⚡",
     name: "Server-Side Rendering",
     label: "SSR",
-    color: "blue" as const,
+    style: "strat-ssr",
     desc: "HTML rendered per-request at the edge. Data fetched on every visit.",
     pros: ["Always fresh", "SEO native", "Personalized"],
     cons: ["Server cost", "Slower TTFB"],
@@ -48,9 +45,9 @@ const STRATEGIES = [
     emoji: "🖥️",
     name: "Client-Side Rendering",
     label: "CSR",
-    color: "purple" as const,
+    style: "strat-csr",
     desc: "Minimal HTML shell, renders in the browser. Great for app-like UIs.",
-    pros: ["Fast nav", "Rich interactivity", "Low server load"],
+    pros: ["Fast nav", "Rich interactivity", "Low server"],
     cons: ["Poor SEO", "Slow first load"],
   },
   {
@@ -58,7 +55,7 @@ const STRATEGIES = [
     emoji: "🏗️",
     name: "Static Generation",
     label: "SSG",
-    color: "emerald" as const,
+    style: "strat-ssg",
     desc: "Pre-rendered at build time into static HTML. Instant edge delivery.",
     pros: ["Instant TTFB", "Perfect SEO", "Zero compute"],
     cons: ["Stale data", "Needs rebuild"],
@@ -68,8 +65,8 @@ const STRATEGIES = [
     emoji: "🌊",
     name: "Streaming SSR",
     label: "Streaming",
-    color: "cyan" as const,
-    desc: "HTML streams progressively as data resolves. No single query blocks the page.",
+    style: "strat-streaming",
+    desc: "HTML streams progressively as data resolves. No single query blocks.",
     pros: ["Progressive render", "Great perceived perf"],
     cons: ["More complex", "Needs Suspense"],
   },
@@ -78,9 +75,9 @@ const STRATEGIES = [
     emoji: "🔄",
     name: "Incremental Static Regeneration",
     label: "ISR",
-    color: "amber" as const,
-    desc: "Cached at the edge with TTL. Stale content served while regenerating in background.",
-    pros: ["Fast on cache hit", "Auto-revalidate", "Global edge"],
+    style: "strat-isr",
+    desc: "Cached at the edge with TTL. Stale content served while regenerating.",
+    pros: ["Fast cache hits", "Auto-revalidate", "Global edge"],
     cons: ["Stale window", "First visit slower"],
   },
   {
@@ -88,8 +85,8 @@ const STRATEGIES = [
     emoji: "🧩",
     name: "Partial Prerendering",
     label: "PPR",
-    color: "pink" as const,
-    desc: "Static HTML shell pre-rendered. Dynamic content loads on client, filling holes.",
+    style: "strat-ppr",
+    desc: "Static HTML shell pre-rendered. Dynamic holes fill in on client.",
     pros: ["Instant shell", "Dynamic islands"],
     cons: ["Client JS needed", "Setup overhead"],
   },
@@ -98,7 +95,7 @@ const STRATEGIES = [
     emoji: "🏝️",
     name: "React Islands",
     label: "Islands",
-    color: "teal" as const,
+    style: "strat-islands",
     desc: "Static page with isolated interactive components that hydrate independently.",
     pros: ["Minimal JS", "Independent hydration"],
     cons: ["Not for apps", "Cross-island comms"],
@@ -126,12 +123,13 @@ export default function Dashboard() {
             to={s.to}
             viewTransition
             prefetch="intent"
-            className="group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 card-hover animate-scale-in"
+            className={`group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 card-hover animate-scale-in ${s.style}`}
             style={{ animationDelay: `${i * 60}ms` } as React.CSSProperties}
           >
             <div className="flex items-center gap-3 mb-3">
               <span
-                className={`inline-flex items-center justify-center w-10 h-10 rounded-xl text-xl bg-zinc-100 dark:bg-zinc-800 ring-1 ${COLOR_RING[s.color]}`}
+                className="inline-flex items-center justify-center w-10 h-10 rounded-xl text-xl bg-zinc-50 dark:bg-zinc-800 ring-1"
+                style={{ borderColor: "var(--s-ring)" }}
               >
                 {s.emoji}
               </span>
@@ -164,6 +162,21 @@ export default function Dashboard() {
                   {c}
                 </span>
               ))}
+            </div>
+            <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+              <span className="text-[11px] font-medium" style={{ color: "var(--s-accent)" }}>
+                View demo
+              </span>
+              <svg
+                className="w-3.5 h-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                style={{ color: "var(--s-accent)" }}
+                strokeWidth="2"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
             </div>
           </Link>
         ))}

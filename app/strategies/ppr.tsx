@@ -2,10 +2,10 @@ import { Suspense, useState, useEffect } from "react";
 import type { Route } from "./+types/ppr";
 import { fetchUserProfile, fetchRecommendations, fetchServerTimestamp } from "~/lib/data";
 import { createMetrics } from "~/lib/metrics";
-import { MetricsBar } from "~/components/metrics-badge";
 import { CodeSnippet } from "~/components/code-snippet";
 import { ComparisonPanel } from "~/components/comparison-panel";
 import { CardSkeleton } from "~/components/skeleton";
+import { StrategyPage, SectionDivider } from "~/components/strategy-page";
 
 export function meta() {
   return [{ title: "PPR — Partial Prerendering" }];
@@ -23,26 +23,30 @@ export default function PPR({ loaderData }: Route.ComponentProps) {
   const { profile, shellTimestamp, metrics } = loaderData;
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <header>
-        <h1 className="text-3xl font-bold mb-1">🧩 Partial Prerendering</h1>
-        <MetricsBar metrics={metrics} />
-        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed">
-          Pre-rendered at build time into a <strong>static HTML shell</strong>. The profile below is
-          baked in. Dynamic sections are "holes" — they load on the client after hydration.
-        </p>
-        <div className="mt-4 p-4 rounded-xl border border-pink-200 dark:border-pink-800 bg-pink-50 dark:bg-pink-950 text-sm">
-          <p className="text-pink-700 dark:text-pink-300 font-mono text-xs">
-            Static shell baked at build time — dynamic holes fill in on client navigation.
-          </p>
-        </div>
-      </header>
+    <StrategyPage
+      strategy="ppr"
+      emoji="🧩"
+      title="Partial Prerendering"
+      metrics={metrics}
+      description="Pre-rendered at build time into a static HTML shell. The profile below is baked in at build time. Dynamic sections are holes that load on the client after hydration — the shell renders instantly, holes fill in progressively."
+    >
+      <SectionDivider label="How it works" />
+      <CodeSnippet code={CODE} filename="app/strategies/ppr.tsx" strategy="PPR" />
 
-      <CodeSnippet code={PPR_CODE} filename="app/strategies/ppr.tsx" strategy="PPR" />
+      <div
+        className="rounded-xl border p-4 text-sm"
+        style={{ backgroundColor: "var(--s-bg)", borderColor: "var(--s-border)" }}
+      >
+        <p className="font-mono text-xs" style={{ color: "var(--s-text)" }}>
+          Static shell baked at build time — dynamic holes fill in on client navigation.
+        </p>
+      </div>
+
+      <SectionDivider label="Live demo" />
 
       <section className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-zinc-900 p-5 card-hover">
-        <h2 className="font-semibold text-sm mb-4">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 mr-2 font-semibold">
+        <h2 className="font-semibold text-sm mb-4 flex items-center gap-2">
+          <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400">
             STATIC SHELL
           </span>
           User Profile (Pre-rendered)
@@ -60,11 +64,9 @@ export default function PPR({ loaderData }: Route.ComponentProps) {
       <Suspense fallback={<CardSkeleton />}>
         <DynamicRecs />
       </Suspense>
-
       <Suspense fallback={<CardSkeleton />}>
         <DynamicTimestamp />
       </Suspense>
-
       <Suspense fallback={<CardSkeleton />}>
         <DynamicCounter />
       </Suspense>
@@ -73,6 +75,7 @@ export default function PPR({ loaderData }: Route.ComponentProps) {
         Shell build timestamp: {shellTimestamp}
       </p>
 
+      <SectionDivider label="When to use it" />
       <ComparisonPanel
         pros={["Instant static shell", "Dynamic content on client", "Great LCP scores"]}
         cons={["Client JS required for holes", "Setup complexity", "Not all frameworks support it"]}
@@ -82,7 +85,7 @@ export default function PPR({ loaderData }: Route.ComponentProps) {
           { to: "/islands", label: "Islands", emoji: "🏝️" },
         ]}
       />
-    </div>
+    </StrategyPage>
   );
 }
 
@@ -91,13 +94,12 @@ function DynamicRecs() {
   useEffect(() => {
     void fetchRecommendations(1500).then(setData);
   }, []);
-
   return (
     <section className="rounded-xl border border-pink-200 dark:border-pink-800 bg-white dark:bg-zinc-900 p-5">
-      <h2 className="font-semibold text-sm mb-4">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] bg-pink-50 dark:bg-pink-950 text-pink-600 dark:text-pink-400 mr-2 font-semibold">
+      <h2 className="font-semibold text-sm mb-4 flex items-center gap-2">
+        <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-semibold bg-pink-50 dark:bg-pink-950 text-pink-600 dark:text-pink-400">
           DYNAMIC HOLE
-        </span>
+        </span>{" "}
         Recommendations
       </h2>
       {data ? (
@@ -129,13 +131,12 @@ function DynamicTimestamp() {
     const t = setTimeout(() => setTs(new Date().toISOString()), 800);
     return () => clearTimeout(t);
   }, []);
-
   return (
     <section className="rounded-xl border border-pink-200 dark:border-pink-800 bg-white dark:bg-zinc-900 p-5">
-      <h2 className="font-semibold text-sm mb-4">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] bg-pink-50 dark:bg-pink-950 text-pink-600 dark:text-pink-400 mr-2 font-semibold">
+      <h2 className="font-semibold text-sm mb-4 flex items-center gap-2">
+        <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-semibold bg-pink-50 dark:bg-pink-950 text-pink-600 dark:text-pink-400">
           DYNAMIC HOLE
-        </span>
+        </span>{" "}
         Live Edge Timestamp
       </h2>
       {ts ? (
@@ -156,10 +157,10 @@ function DynamicCounter() {
   const [count, setCount] = useState(0);
   return (
     <section className="rounded-xl border border-pink-200 dark:border-pink-800 bg-white dark:bg-zinc-900 p-5">
-      <h2 className="font-semibold text-sm mb-4">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] bg-pink-50 dark:bg-pink-950 text-pink-600 dark:text-pink-400 mr-2 font-semibold">
+      <h2 className="font-semibold text-sm mb-4 flex items-center gap-2">
+        <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-semibold bg-pink-50 dark:bg-pink-950 text-pink-600 dark:text-pink-400">
           DYNAMIC HOLE
-        </span>
+        </span>{" "}
         Client-Side Counter
       </h2>
       <div className="flex items-center gap-4">
@@ -173,13 +174,13 @@ function DynamicCounter() {
         </button>
       </div>
       <p className="text-[10px] text-zinc-400 mt-3">
-        Fully interactive React island — state is client-only.
+        Fully interactive island — state is client-only.
       </p>
     </section>
   );
 }
 
-const PPR_CODE = `// react-router.config.ts — pre-rendered at build
+const CODE = `// react-router.config.ts
 prerender: ["/ppr"]
 
 export async function loader() {
@@ -187,7 +188,7 @@ export async function loader() {
   return { profile: await fetchUserProfile() };
 }
 
-// Dynamic holes load on client via useEffect/Suspense
+// Dynamic holes load on client
 function DynamicHole() {
   const [data, setData] = useState(null);
   useEffect(() => { fetchData().then(setData); }, []);

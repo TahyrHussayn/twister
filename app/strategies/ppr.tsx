@@ -52,7 +52,7 @@ export default function PPR({ loaderData }: Route.ComponentProps) {
           User Profile (Pre-rendered)
         </h2>
         <div className="flex items-center gap-4">
-          <span className="text-4xl">{profile.avatar}</span>
+          <img src={profile.avatar} alt={profile.name} className="w-12 h-12 rounded-full" />
           <div>
             <p className="font-semibold">{profile.name}</p>
             <p className="text-xs text-zinc-500">{profile.email}</p>

@@ -67,6 +67,10 @@ const CACHE_MAP: Record<CacheStatus, { label: string; cls: string }> = {
     label: "STALE",
     cls: "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
   },
+  REVALIDATED: {
+    label: "REVAL",
+    cls: "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
+  },
   BYPASS: {
     label: "BYPASS",
     cls: "bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700",

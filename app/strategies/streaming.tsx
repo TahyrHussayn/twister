@@ -93,7 +93,7 @@ function ProfileSection({ promise }: { promise: ReturnType<typeof fetchUserProfi
     <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 card-hover">
       <h2 className="font-semibold text-sm mb-4">User Profile</h2>
       <div className="flex items-center gap-4">
-        <span className="text-4xl">{p.avatar}</span>
+        <img src={p.avatar} alt={p.name} className="w-12 h-12 rounded-full" />
         <div>
           <p className="font-semibold">{p.name}</p>
           <p className="text-xs text-zinc-500">{p.email}</p>

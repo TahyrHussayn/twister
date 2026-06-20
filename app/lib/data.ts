@@ -1,5 +1,3 @@
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 export type UserProfile = {
   id: string;
   name: string;
@@ -37,42 +35,6 @@ export type Product = {
   category: string;
 };
 
-const PROFILE: UserProfile = {
-  id: "usr_1",
-  name: "Ada Lovelace",
-  email: "ada@edgecompute.dev",
-  avatar: "👩‍💻",
-  joinedAt: new Date().toISOString(),
-};
-
-const ACTIVITIES: ActivityItem[] = [
-  { id: "a1", action: "deployed", target: "api-gateway", timestamp: new Date().toISOString() },
-  {
-    id: "a2",
-    action: "rolled back",
-    target: "payment-service",
-    timestamp: new Date(Date.now() - 60000).toISOString(),
-  },
-  {
-    id: "a3",
-    action: "scaled",
-    target: "worker-pool",
-    timestamp: new Date(Date.now() - 120000).toISOString(),
-  },
-  {
-    id: "a4",
-    action: "configured",
-    target: "cdn-cache",
-    timestamp: new Date(Date.now() - 180000).toISOString(),
-  },
-  {
-    id: "a5",
-    action: "monitored",
-    target: "db-cluster",
-    timestamp: new Date(Date.now() - 300000).toISOString(),
-  },
-];
-
 const RECOMMENDATIONS: Recommendation[] = [
   { id: "r1", title: "Edge Computing Patterns", category: "Architecture", score: 0.98 },
   { id: "r2", title: "Streaming SSR Deep Dive", category: "Performance", score: 0.95 },
@@ -87,46 +49,74 @@ const ANALYTICS: Analytics = {
   bounceRate: 0.23,
 };
 
-const PRODUCTS: Product[] = [
-  { id: "p1", name: "Edge Worker Pro", price: 49, inStock: true, category: "Compute" },
-  { id: "p2", name: "Global Cache Plus", price: 29, inStock: true, category: "CDN" },
-  { id: "p3", name: "Durable Storage", price: 99, inStock: false, category: "Storage" },
-  { id: "p4", name: "Realtime Sync", price: 79, inStock: true, category: "Data" },
-  { id: "p5", name: "Analytics Suite", price: 149, inStock: true, category: "Observability" },
-];
-
-export async function fetchUserProfile(delay = 400): Promise<UserProfile> {
-  await sleep(delay);
-  return PROFILE;
+export async function fetchUserProfile(delay = 0): Promise<UserProfile> {
+  const res = await fetch("https://randomuser.me/api/");
+  const json = (await res.json()) as {
+    results: {
+      login: { uuid: string };
+      name: { first: string; last: string };
+      email: string;
+      picture: { thumbnail: string };
+      registered: { date: string };
+    }[];
+  };
+  const u = json.results[0];
+  if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+  return {
+    id: u.login.uuid.slice(0, 8),
+    name: `${u.name.first} ${u.name.last}`,
+    email: u.email,
+    avatar: u.picture.thumbnail,
+    joinedAt: u.registered.date,
+  };
 }
 
-export async function fetchActivityFeed(delay = 800): Promise<ActivityItem[]> {
-  await sleep(delay);
-  return ACTIVITIES;
+export async function fetchActivityFeed(delay = 0): Promise<ActivityItem[]> {
+  const res = await fetch("https://jsonplaceholder.typicode.com/posts?_limit=6");
+  const posts = (await res.json()) as { id: number; title: string; body: string }[];
+  if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+  return posts.map((p) => ({
+    id: `a${p.id}`,
+    action: ["deployed", "scaled", "rolled back", "monitored", "configured", "optimized"][
+      (p.id - 1) % 6
+    ],
+    target: p.title.slice(0, 25),
+    timestamp: new Date(Date.now() - p.id * 45000).toISOString(),
+  }));
 }
 
-export async function fetchRecommendations(delay = 1200): Promise<Recommendation[]> {
-  await sleep(delay);
+export async function fetchRecommendations(delay = 0): Promise<Recommendation[]> {
+  if (delay > 0) await new Promise((r) => setTimeout(r, delay));
   return RECOMMENDATIONS;
 }
 
-export async function fetchAnalytics(delay = 600): Promise<Analytics> {
-  await sleep(delay);
+export async function fetchAnalytics(delay = 0): Promise<Analytics> {
+  if (delay > 0) await new Promise((r) => setTimeout(r, delay));
   return ANALYTICS;
 }
 
-export async function fetchProductList(delay = 1000): Promise<Product[]> {
-  await sleep(delay);
-  return PRODUCTS;
+export async function fetchProductList(): Promise<Product[]> {
+  const res = await fetch("https://fakestoreapi.com/products?limit=8");
+  const items = (await res.json()) as {
+    id: number;
+    title: string;
+    price: number;
+    category: string;
+    rating: { count: number };
+  }[];
+  return items.map((p) => ({
+    id: `p${p.id}`,
+    name: p.title,
+    price: p.price,
+    inStock: p.rating.count > 50,
+    category: p.category,
+  }));
 }
 
 export function fetchServerTimestamp(): string {
   return new Date().toISOString();
 }
 
-export function fetchStaticBuildTimestamp(): { iso: string; msg: string } {
-  return {
-    iso: new Date().toISOString(),
-    msg: `Built at ${new Date().toISOString()}`,
-  };
+export function fetchStaticBuildTimestamp(): string {
+  return new Date().toISOString();
 }

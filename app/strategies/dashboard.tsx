@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { useState } from "react";
 import { createMetrics } from "~/lib/metrics";
 
 export function meta() {
@@ -18,26 +19,15 @@ export function loader() {
   return { metrics: createMetrics("Dashboard") };
 }
 
-type S = {
-  to: string;
-  emoji: string;
-  name: string;
-  label: string;
-  style: string;
-  desc: string;
-  pros: string[];
-  cons: string[];
-};
-
-const STRATEGIES: S[] = [
+const STRATEGIES = [
   {
     to: "/ssr",
     emoji: "⚡",
     name: "Server-Side Rendering",
     label: "SSR",
     style: "strat-ssr",
-    desc: "HTML rendered per-request at the edge. Data fetched on every visit.",
-    pros: ["Always fresh", "SEO native", "Personalized"],
+    desc: "HTML rendered per-request at the edge.",
+    pros: ["Always fresh", "SEO native"],
     cons: ["Server cost", "Slower TTFB"],
   },
   {
@@ -46,9 +36,9 @@ const STRATEGIES: S[] = [
     name: "Client-Side Rendering",
     label: "CSR",
     style: "strat-csr",
-    desc: "Minimal HTML shell, renders in the browser. Great for app-like UIs.",
-    pros: ["Fast nav", "Rich interactivity", "Low server"],
-    cons: ["Poor SEO", "Slow first load"],
+    desc: "Minimal HTML shell, renders in browser.",
+    pros: ["Fast nav", "Low server"],
+    cons: ["Poor SEO", "Slow load"],
   },
   {
     to: "/ssg",
@@ -56,9 +46,9 @@ const STRATEGIES: S[] = [
     name: "Static Generation",
     label: "SSG",
     style: "strat-ssg",
-    desc: "Pre-rendered at build time into static HTML. Instant edge delivery.",
-    pros: ["Instant TTFB", "Perfect SEO", "Zero compute"],
-    cons: ["Stale data", "Needs rebuild"],
+    desc: "Pre-rendered at build time. Instant edge.",
+    pros: ["Instant TTFB", "Perfect SEO"],
+    cons: ["Stale data", "Rebuild"],
   },
   {
     to: "/streaming",
@@ -66,9 +56,9 @@ const STRATEGIES: S[] = [
     name: "Streaming SSR",
     label: "Streaming",
     style: "strat-streaming",
-    desc: "HTML streams progressively as data resolves. No single query blocks.",
-    pros: ["Progressive render", "Great perceived perf"],
-    cons: ["More complex", "Needs Suspense"],
+    desc: "HTML streams as data resolves.",
+    pros: ["No waterfalls", "Best perceived"],
+    cons: ["More complex"],
   },
   {
     to: "/isr",
@@ -76,9 +66,9 @@ const STRATEGIES: S[] = [
     name: "Incremental Static Regeneration",
     label: "ISR",
     style: "strat-isr",
-    desc: "Cached at the edge with TTL. Stale content served while regenerating.",
-    pros: ["Fast cache hits", "Auto-revalidate", "Global edge"],
-    cons: ["Stale window", "First visit slower"],
+    desc: "Global edge cache with TTL.",
+    pros: ["Fast cache HIT", "Auto-regen"],
+    cons: ["Stale window"],
   },
   {
     to: "/ppr",
@@ -86,9 +76,9 @@ const STRATEGIES: S[] = [
     name: "Partial Prerendering",
     label: "PPR",
     style: "strat-ppr",
-    desc: "Static HTML shell pre-rendered. Dynamic holes fill in on client.",
-    pros: ["Instant shell", "Dynamic islands"],
-    cons: ["Client JS needed", "Setup overhead"],
+    desc: "Static shell + dynamic holes.",
+    pros: ["Instant shell"],
+    cons: ["JS for holes"],
   },
   {
     to: "/islands",
@@ -96,13 +86,42 @@ const STRATEGIES: S[] = [
     name: "React Islands",
     label: "Islands",
     style: "strat-islands",
-    desc: "Static page with isolated interactive components that hydrate independently.",
-    pros: ["Minimal JS", "Independent hydration"],
-    cons: ["Not for apps", "Cross-island comms"],
+    desc: "Isolated interactive components.",
+    pros: ["Minimal JS"],
+    cons: ["Not for apps"],
   },
 ];
 
+type BenchResult = {
+  strategy: string;
+  url: string;
+  ttfb: number;
+  status: number;
+  cacheStatus?: string;
+  error?: string;
+};
+
 export default function Dashboard() {
+  const [results, setResults] = useState<BenchResult[] | null>(null);
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const runBenchmark = async () => {
+    setRunning(true);
+    setError(null);
+    setResults(null);
+    try {
+      const res = await fetch("/api/benchmark", { method: "POST" });
+      if (!res.ok) throw new Error(`Benchmark failed (${res.status})`);
+      const json = (await res.json()) as { results: BenchResult[]; timestamp: string };
+      setResults(json.results);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setRunning(false);
+    }
+  };
+
   return (
     <div className="space-y-10">
       <header className="text-center pt-8 pb-2 animate-fade-in">
@@ -110,12 +129,123 @@ export default function Dashboard() {
           Pick your rendering strategy
         </h1>
         <p className="text-base text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto leading-relaxed">
-          Seven strategies, one codebase. All running on{" "}
-          <strong className="text-zinc-700 dark:text-zinc-300">Cloudflare Workers</strong> at the
-          edge. Click a card to see a live demo with real performance metrics.
+          Seven strategies on{" "}
+          <strong className="text-zinc-700 dark:text-zinc-300">Cloudflare Workers</strong>. Click
+          any card to see a live demo — or run the benchmark below.
         </p>
       </header>
 
+      {/* Benchmark Section */}
+      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 animate-fade-in">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-lg">Live Benchmark</h2>
+          <button
+            type="button"
+            onClick={runBenchmark}
+            disabled={running}
+            className="px-4 py-2 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {running ? "Running..." : "Run Benchmark"}
+          </button>
+        </div>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">
+          Fetches all 7 strategy pages from the edge and measures round-trip time. ISR shows cache
+          HIT on second run.
+        </p>
+
+        {error && (
+          <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 p-4 mb-4 text-sm text-red-600 dark:text-red-400">
+            {error}
+          </div>
+        )}
+
+        {results && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-200 dark:border-zinc-800">
+                  <th className="px-4 py-2 text-left text-xs font-semibold">Strategy</th>
+                  <th className="px-4 py-2 text-right text-xs font-semibold">TTFB</th>
+                  <th className="px-4 py-2 text-center text-xs font-semibold">Cache</th>
+                  <th className="px-4 py-2 text-center text-xs font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {results
+                  .slice()
+                  .sort((a, b) => (a.ttfb === -1 ? 9999 : a.ttfb) - (b.ttfb === -1 ? 9999 : b.ttfb))
+                  .map((r) => (
+                    <tr key={r.strategy}>
+                      <td className="px-4 py-2">
+                        <Link
+                          to={r.url}
+                          viewTransition
+                          className="font-medium text-sm hover:underline"
+                          style={{ color: getAccent(r.strategy) }}
+                        >
+                          {r.strategy}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono text-xs">
+                        {r.error ? (
+                          <span className="text-red-500">ERR</span>
+                        ) : (
+                          <span
+                            className={
+                              r.ttfb < 100
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : r.ttfb < 300
+                                  ? "text-amber-600 dark:text-amber-400"
+                                  : "text-red-600 dark:text-red-400"
+                            }
+                          >
+                            {r.ttfb}ms
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-center text-[10px] font-mono">
+                        {r.cacheStatus === "HIT" && (
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400">
+                            HIT
+                          </span>
+                        )}
+                        {r.cacheStatus === "MISS" && (
+                          <span className="px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-950 text-red-500 dark:text-red-400">
+                            MISS
+                          </span>
+                        )}
+                        {!r.cacheStatus && r.error && <span className="text-red-400">ERR</span>}
+                        {!r.cacheStatus && !r.error && <span className="text-zinc-400">—</span>}
+                      </td>
+                      <td className="px-4 py-2 text-center text-[10px] font-mono">
+                        {r.status === 200 ? (
+                          <span className="text-emerald-500">200</span>
+                        ) : r.status > 0 ? (
+                          <span className="text-red-500">{r.status}</span>
+                        ) : (
+                          <span className="text-red-400">ERR</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {!results && !error && (
+          <div className="rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800 p-8 text-center">
+            <p className="text-sm text-zinc-400">
+              Run the benchmark to see real edge performance numbers.
+            </p>
+            <p className="text-xs text-zinc-400 mt-1">
+              Run twice to see ISR cache behavior (MISS → HIT).
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Strategy Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {STRATEGIES.map((s, i) => (
           <Link
@@ -183,4 +313,25 @@ export default function Dashboard() {
       </div>
     </div>
   );
+}
+
+function getAccent(strat: string): string {
+  switch (strat) {
+    case "SSR":
+      return "#2563eb";
+    case "CSR":
+      return "#7c3aed";
+    case "SSG":
+      return "#059669";
+    case "Streaming":
+      return "#0891b2";
+    case "ISR":
+      return "#d97706";
+    case "PPR":
+      return "#db2777";
+    case "Islands":
+      return "#0d9488";
+    default:
+      return "#71717a";
+  }
 }

@@ -164,7 +164,7 @@ export default function SSG({ loaderData }: Route.ComponentProps) {
 
 const SSG_CODE = `// react-router.config.ts
 export default {
-  prerender: ["/ssg", "/ppr"],
+  prerender: ["/ssg", "/ppr", "/hybrid"],
 } satisfies Config;
 
 // app/strategies/ssg.tsx

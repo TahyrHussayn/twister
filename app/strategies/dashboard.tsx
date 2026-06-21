@@ -3,6 +3,7 @@ import { useState } from "react";
 import { createMetrics } from "~/lib/metrics";
 import { STRATEGY_ACCENTS } from "~/lib/theme";
 import { CacheBadge } from "~/components/metrics-badge";
+import { TransparencyLegend } from "~/components/legend";
 
 export function meta() {
   return [
@@ -86,6 +87,33 @@ const STRATEGIES = [
     desc: "Static HTML with isolated interactive components.",
     pills: ["Minimal JS", "Progressive Hydration"],
     delay: "stagger-7",
+  },
+  {
+    to: "/htmx",
+    name: "HTMX Playground",
+    label: "HTMX",
+    style: "strat-htmx",
+    desc: "Hypermedia driven UI using server-rendered HTML fragments.",
+    pills: ["Client-Side Swaps", "Zero JS Framework", "Lightweight"],
+    delay: "stagger-8",
+  },
+  {
+    to: "/hybrid",
+    name: "Hybrid Rendering",
+    label: "Hybrid",
+    style: "strat-hybrid",
+    desc: "Mix SSG and SSR per-route, or fetch CSR data into an SSG shell.",
+    pills: ["Per-Route Strategy", "Static + Dynamic"],
+    delay: "stagger-9",
+  },
+  {
+    to: "/edge-vs-origin",
+    name: "Edge vs Origin",
+    label: "Edge-Vs-Origin",
+    style: "strat-edge-vs-origin",
+    desc: "Compare latency between Edge SSR and centralized Origin SSR.",
+    pills: ["Latency Benchmark", "Architecture"],
+    delay: "stagger-10",
   },
 ];
 
@@ -346,6 +374,10 @@ export default function Dashboard() {
             </Link>
           );
         })}
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 mt-8">
+        <TransparencyLegend />
       </div>
 
       <style

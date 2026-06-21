@@ -9,6 +9,9 @@ export default [
   route("isr", "strategies/isr.tsx"),
   route("ppr", "strategies/ppr.tsx"),
   route("islands", "strategies/islands.tsx"),
+  route("htmx", "strategies/htmx.tsx"),
+  route("hybrid", "strategies/hybrid.tsx"),
+  route("edge-vs-origin", "strategies/edge-vs-origin.tsx"),
   route("api/purge", "api/purge.ts"),
   route("api/benchmark", "api/benchmark.ts"),
 ] satisfies RouteConfig;

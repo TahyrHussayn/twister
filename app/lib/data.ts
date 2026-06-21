@@ -1,4 +1,4 @@
-export class DataError extends Error {
+class DataError extends Error {
   constructor(
     message: string,
     public source: string,
@@ -24,7 +24,6 @@ export type UserProfile = {
   name: string;
   email: string;
   avatar: string;
-  joinedAt: string;
 };
 
 export type ActivityItem = {
@@ -64,7 +63,6 @@ export async function fetchUserProfile(delay = 0): Promise<UserProfile> {
       name: { first: string; last: string };
       email: string;
       picture: { thumbnail: string };
-      registered: { date: string };
     }[];
   };
   const u = json.results[0];
@@ -74,7 +72,6 @@ export async function fetchUserProfile(delay = 0): Promise<UserProfile> {
     name: `${u.name.first} ${u.name.last}`,
     email: u.email,
     avatar: u.picture.thumbnail,
-    joinedAt: u.registered.date,
   };
 }
 

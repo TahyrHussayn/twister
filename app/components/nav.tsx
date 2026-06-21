@@ -11,6 +11,9 @@ const LINKS = [
   { to: "/isr", label: "ISR", key: "ISR" },
   { to: "/ppr", label: "PPR", key: "PPR" },
   { to: "/islands", label: "Islands", key: "Islands" },
+  { to: "/htmx", label: "HTMX", key: "HTMX" },
+  { to: "/hybrid", label: "Hybrid", key: "HYBRID" },
+  { to: "/edge-vs-origin", label: "Edge vs Origin", key: "EDGE-VS-ORIGIN" },
 ] as const;
 
 export function Nav() {

@@ -65,7 +65,8 @@ export function CodeSnippet({
         <button
           type="button"
           onClick={copy}
-          className="text-xs font-medium px-2 py-1 rounded-md transition-colors"
+          aria-label="Copy code"
+          className="text-xs font-medium px-2 py-1 rounded-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/40 hover:bg-zinc-800"
           style={{
             color: copied ? accent || "#10b981" : "#71717a",
             backgroundColor: copied

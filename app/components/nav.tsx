@@ -1,5 +1,5 @@
 import { NavLink } from "react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { STRATEGY_ACCENTS } from "~/lib/theme";
 
 const LINKS = [
@@ -18,6 +18,16 @@ const LINKS = [
 
 export function Nav() {
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && open) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
 
   return (
     <nav className="elite-nav">
@@ -62,7 +72,8 @@ export function Nav() {
           <button
             type="button"
             onClick={() => setOpen(!open)}
-            className="md:hidden p-2 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
+            aria-expanded={open}
+            className="md:hidden p-2 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/40"
             aria-label="Toggle menu"
           >
             <svg

@@ -1,7 +1,6 @@
 import type { Route } from "./+types/edge-vs-origin";
 import { createMetrics } from "~/lib/metrics";
 import { StrategyPage, SectionDivider } from "~/components/strategy-page";
-import { CodeSnippet } from "~/components/code-snippet";
 import { useState } from "react";
 
 export function meta() {

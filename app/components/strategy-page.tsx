@@ -32,10 +32,7 @@ export function StrategyPage({
   children: React.ReactNode;
 }) {
   const strategyKey =
-    strategy === "streaming" ||
-    strategy === "islands" ||
-    strategy === "hybrid" ||
-    strategy === "htmx"
+    strategy === "streaming" || strategy === "islands"
       ? strategy.charAt(0).toUpperCase() + strategy.slice(1)
       : strategy.toUpperCase();
   const icon = STRATEGY_ACCENTS[strategyKey]?.icon || "⚙️";

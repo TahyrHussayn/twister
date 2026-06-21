@@ -4,6 +4,7 @@ import { createMetrics } from "~/lib/metrics";
 import { STRATEGY_ACCENTS } from "~/lib/theme";
 import { CacheBadge } from "~/components/metrics-badge";
 import { TransparencyLegend } from "~/components/legend";
+import { STRATEGY_METADATA } from "~/lib/strategy-metadata";
 
 export function meta() {
   return [
@@ -100,7 +101,7 @@ const STRATEGIES = [
   {
     to: "/hybrid",
     name: "Hybrid Rendering",
-    label: "Hybrid",
+    label: "HYBRID",
     style: "strat-hybrid",
     desc: "Mix SSG and SSR per-route, or fetch CSR data into an SSG shell.",
     pills: ["Per-Route Strategy", "Static + Dynamic"],
@@ -109,7 +110,7 @@ const STRATEGIES = [
   {
     to: "/edge-vs-origin",
     name: "Edge vs Origin",
-    label: "Edge-Vs-Origin",
+    label: "EDGE-VS-ORIGIN",
     style: "strat-edge-vs-origin",
     desc: "Compare latency between Edge SSR and centralized Origin SSR.",
     pills: ["Latency Benchmark", "Architecture"],
@@ -321,22 +322,39 @@ export default function Dashboard() {
                 borderColor: `var(--s-border, ${accent.hex}30)`,
               }}
             >
-              <div className="mb-4 flex items-center gap-3">
-                <span className="text-3xl filter drop-shadow-md">{accent.icon}</span>
-                <div>
-                  <h3
-                    className="font-extrabold text-lg tracking-tight transition-colors"
-                    style={{ color: "var(--s-text, #111)" }}
-                  >
-                    {s.name}
-                  </h3>
-                  <span
-                    className="text-[10px] font-mono font-bold tracking-widest uppercase opacity-70"
-                    style={{ color: "var(--s-accent)" }}
-                  >
-                    {s.label}
-                  </span>
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl filter drop-shadow-md">{accent.icon}</span>
+                  <div>
+                    <h3
+                      className="font-extrabold text-lg tracking-tight transition-colors"
+                      style={{ color: "var(--s-text, #111)" }}
+                    >
+                      {s.name}
+                    </h3>
+                    <span
+                      className="text-[10px] font-mono font-bold tracking-widest uppercase opacity-70"
+                      style={{ color: "var(--s-accent)" }}
+                    >
+                      {s.label}
+                    </span>
+                  </div>
                 </div>
+                {(() => {
+                  const meta = (STRATEGY_METADATA as any)[s.to.replace("/", "")];
+                  if (!meta) return null;
+                  return (
+                    <div
+                      className={`shrink-0 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                        meta.isReal
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                          : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                      }`}
+                    >
+                      {meta.isReal ? "Native" : "Demo"}
+                    </div>
+                  );
+                })()}
               </div>
 
               <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6 leading-relaxed flex-1 font-medium">

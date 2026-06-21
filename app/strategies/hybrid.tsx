@@ -34,7 +34,7 @@ export default function Hybrid({ loaderData }: Route.ComponentProps) {
 
   useEffect(() => {
     // Client-side fetch
-    fetchProductList().then((data) => {
+    void fetchProductList().then((data) => {
       setProducts(data);
       setLoading(false);
     });

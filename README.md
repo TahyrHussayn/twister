@@ -91,7 +91,7 @@ Twister is styled using **Tailwind CSS v4** seamlessly integrated into Vite. The
 ### Phase 3: Architectural Consistency & Polish
 
 - **Theme Consistency**: Fixed capitalization bugs in the backend benchmarking logic (`api/benchmark.ts`) for HTMX, Hybrid, and Edge-vs-Origin to ensure seamless mapping with CSS accent tokens.
-- **UI Integrity**: Added missing `.strat-*` glow variables to `app.css` for the three newest strategies.
+- **UI Integrity**: Added missing `.strat-*` glow variables to `app.css` and injected the missing `.stagger-8`, `.stagger-9`, and `.stagger-10` animation delay classes so the newest dashboard cards cascade flawlessly.
 - **Documentation Parity**: Updated code snippets (e.g., SSG configuration) to perfectly match the active, deployed `react-router.config.ts`.
 
 _Built with ❤️ utilizing React Router, Cloudflare Workers, and Vite+._

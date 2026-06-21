@@ -397,6 +397,15 @@ body {
 .stagger-7 {
   animation-delay: 0.35s;
 }
+.stagger-8 {
+  animation-delay: 0.4s;
+}
+.stagger-9 {
+  animation-delay: 0.45s;
+}
+.stagger-10 {
+  animation-delay: 0.5s;
+}
 
 /* ── Pulse glow for live indicators ── */
 @keyframes pulse-glow {

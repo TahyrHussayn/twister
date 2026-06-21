@@ -5,6 +5,7 @@ import type { Product } from "~/lib/data";
 import { createMetrics } from "~/lib/metrics";
 import { StrategyPage, SectionDivider } from "~/components/strategy-page";
 import { CodeSnippet } from "~/components/code-snippet";
+import { ComparisonPanel } from "~/components/comparison-panel";
 
 export function meta() {
   return [
@@ -101,7 +102,26 @@ export default function Hybrid({ loaderData }: Route.ComponentProps) {
       </div>
 
       <SectionDivider label="How it works" />
-      <CodeSnippet code={HYBRID_CODE} filename="app/strategies/hybrid.tsx" strategy="hybrid" />
+      <CodeSnippet code={HYBRID_CODE} filename="app/strategies/hybrid.tsx" strategy="HYBRID" />
+
+      <SectionDivider label="When to use it" />
+      <ComparisonPanel
+        pros={[
+          "Instant TTFB from SSG shell",
+          "Fresh dynamic data on the client",
+          "Ideal for dashboards and stores",
+        ]}
+        cons={[
+          "Complex rendering mental model",
+          "Requires two data-fetching lifecycles",
+          "SEO bots might miss CSR data",
+        ]}
+        related={[
+          { to: "/ssg", label: "SSG", key: "SSG" },
+          { to: "/csr", label: "CSR", key: "CSR" },
+          { to: "/ppr", label: "PPR", key: "PPR" },
+        ]}
+      />
     </StrategyPage>
   );
 }

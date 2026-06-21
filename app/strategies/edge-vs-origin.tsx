@@ -1,6 +1,7 @@
 import type { Route } from "./+types/edge-vs-origin";
 import { createMetrics } from "~/lib/metrics";
 import { StrategyPage, SectionDivider } from "~/components/strategy-page";
+import { ComparisonPanel } from "~/components/comparison-panel";
 import { useState } from "react";
 
 export function meta() {
@@ -119,6 +120,24 @@ export default function EdgeVsOrigin({ loaderData }: Route.ComponentProps) {
           adds 100ms - 300ms to the TTFB, depending on the user's location.
         </p>
       </div>
+
+      <SectionDivider label="When to use it" />
+      <ComparisonPanel
+        pros={[
+          "Lowest possible latency globally",
+          "No centralized chokepoints",
+          "Massively concurrent and scalable",
+        ]}
+        cons={[
+          "Limited edge compute durations",
+          "Latency to centralized databases can negate gains",
+          "Requires edge-native tooling",
+        ]}
+        related={[
+          { to: "/ssr", label: "SSR", key: "SSR" },
+          { to: "/streaming", label: "Streaming", key: "Streaming" },
+        ]}
+      />
     </StrategyPage>
   );
 }

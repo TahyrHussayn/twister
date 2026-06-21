@@ -2,6 +2,7 @@ import type { Route } from "./+types/htmx";
 import { createMetrics } from "~/lib/metrics";
 import { StrategyPage, SectionDivider } from "~/components/strategy-page";
 import { CodeSnippet } from "~/components/code-snippet";
+import { ComparisonPanel } from "~/components/comparison-panel";
 
 export function meta() {
   return [
@@ -101,7 +102,26 @@ export default function HTMX({ loaderData }: Route.ComponentProps) {
       </div>
 
       <SectionDivider label="How it works" />
-      <CodeSnippet code={HTMX_CODE} filename="app/strategies/htmx.tsx" strategy="htmx" />
+      <CodeSnippet code={HTMX_CODE} filename="app/strategies/htmx.tsx" strategy="HTMX" />
+
+      <SectionDivider label="When to use it" />
+      <ComparisonPanel
+        pros={[
+          "Zero client JS framework required",
+          "Simple mental model",
+          "Uses standard HTML attributes",
+        ]}
+        cons={[
+          "Requires server roundtrips for interaction",
+          "UI state lives on the server",
+          "Harder to build highly complex client state",
+        ]}
+        related={[
+          { to: "/ssr", label: "SSR", key: "SSR" },
+          { to: "/islands", label: "Islands", key: "Islands" },
+          { to: "/csr", label: "CSR", key: "CSR" },
+        ]}
+      />
     </StrategyPage>
   );
 }

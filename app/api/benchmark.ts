@@ -20,8 +20,8 @@ export async function action({ request }: Route.ActionArgs) {
     { strategy: "PPR", path: "/ppr" },
     { strategy: "Islands", path: "/islands" },
     { strategy: "HTMX", path: "/htmx" },
-    { strategy: "Hybrid", path: "/hybrid" },
-    { strategy: "Edge-Vs-Origin", path: "/edge-vs-origin" },
+    { strategy: "HYBRID", path: "/hybrid" },
+    { strategy: "EDGE-VS-ORIGIN", path: "/edge-vs-origin" },
   ];
 
   const results: Result[] = await Promise.all(

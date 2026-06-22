@@ -8,8 +8,14 @@
   "compatibility_date": "2026-06-20",
   "main": "./workers/app.ts",
   "ai": { "binding": "AI" },
-  "kv_namespaces": [{ "binding": "TWISTER_KV", "id": "mock-id-1" }],
-  "d1_databases": [{ "binding": "DB", "database_name": "twister-db", "database_id": "mock-id-2" }],
+  "kv_namespaces": [{ "binding": "TWISTER_KV", "id": "caca7966f1bf484792cfc69b149b1002" }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "twister-db",
+      "database_id": "7a5fec67-1065-44b4-9c74-3c0ee5677db5",
+    },
+  ],
 
   "vars": {
     "VALUE_FROM_CLOUDFLARE": "Hello from Cloudflare",

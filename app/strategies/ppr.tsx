@@ -1,5 +1,5 @@
-import { Suspense, use } from "react";
-import { useSearchParams } from "react-router";
+import { Suspense, use, useState } from "react";
+
 import type { Route } from "./+types/ppr";
 import { fetchUserProfile, fetchRecommendations, type UserProfile } from "~/lib/data";
 import { createMetrics } from "~/lib/metrics";
@@ -260,17 +260,10 @@ function DynamicTimestamp({ timestampPromise }: { timestampPromise: Promise<stri
 }
 
 function DynamicCounter() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const count = Number(searchParams.get("count") || "0");
+  const [count, setCount] = useState(0);
 
   const increment = () => {
-    setSearchParams(
-      (prev) => {
-        prev.set("count", String(count + 1));
-        return prev;
-      },
-      { replace: true, preventScrollReset: true },
-    );
+    setCount((prev) => prev + 1);
   };
 
   return (

@@ -3,7 +3,6 @@ import type { Route } from "./+types/streaming";
 import {
   fetchUserProfile,
   fetchActivityFeed,
-  fetchRecommendations,
   fetchAnalytics,
   fetchServerTimestamp,
 } from "~/lib/data";
@@ -28,11 +27,16 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
   return loaderHeaders;
 }
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request, context }: Route.LoaderArgs) {
+  const env = (context as any).cloudflare.env as Env;
   return {
     profile: fetchUserProfile(500),
     analytics: fetchAnalytics(1000),
-    recommendations: fetchRecommendations(1800),
+    aiStory: env.AI.run("@cf/meta/llama-3-8b-instruct", {
+      messages: [
+        { role: "user", content: "Write a 3-sentence sci-fi story about a rogue AI edge node." },
+      ],
+    }).then((res: any) => res.response as string),
     activities: fetchActivityFeed(2500),
     timestamp: fetchServerTimestamp(),
     metrics: createMetrics("Streaming"),
@@ -41,8 +45,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export default function Streaming({ loaderData }: Route.ComponentProps) {
-  const { profile, analytics, recommendations, activities, timestamp, metrics, edgeInfo } =
-    loaderData;
+  const { profile, analytics, aiStory, activities, timestamp, metrics, edgeInfo } = loaderData;
 
   return (
     <StrategyPage
@@ -91,7 +94,7 @@ export default function Streaming({ loaderData }: Route.ComponentProps) {
       </div>
       <div className="mt-6">
         <Suspense fallback={<CardSkeleton />}>
-          <RecsSection promise={recommendations} />
+          <AIStorySection promise={aiStory} />
         </Suspense>
       </div>
       <div className="mt-6">
@@ -236,8 +239,8 @@ function AnalyticsSection({ promise }: { promise: ReturnType<typeof fetchAnalyti
   );
 }
 
-function RecsSection({ promise }: { promise: ReturnType<typeof fetchRecommendations> }) {
-  const r = use(promise);
+function AIStorySection({ promise }: { promise: Promise<string> }) {
+  const story = use(promise);
   return (
     <section
       className="relative overflow-hidden rounded-2xl border bg-white dark:bg-[#050505] p-6 shadow-sm transition-shadow hover:shadow-md animate-in fade-in zoom-in-95 duration-500"
@@ -245,30 +248,12 @@ function RecsSection({ promise }: { promise: ReturnType<typeof fetchRecommendati
     >
       <h2 className="font-bold text-sm mb-5 text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--s-accent)" }} />
-        Recommendations
+        Edge AI Generation (Llama 3)
       </h2>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {r.map((rec) => (
-          <div
-            key={rec.id}
-            className="rounded-xl border border-zinc-200/60 dark:border-white/5 bg-zinc-50/50 dark:bg-white/[0.02] p-4 transition-colors hover:bg-zinc-100/50 dark:hover:bg-white/[0.04]"
-          >
-            <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 mb-2 leading-snug">
-              {rec.title}
-            </p>
-            <div className="flex items-center justify-between mt-auto">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-                {rec.category}
-              </span>
-              <span
-                className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-md"
-                style={{ color: "var(--s-text)", backgroundColor: "var(--s-bg)" }}
-              >
-                {(rec.score * 100).toFixed(0)}%
-              </span>
-            </div>
-          </div>
-        ))}
+      <div className="p-4 rounded-xl border border-zinc-200/60 dark:border-white/5 bg-zinc-50/50 dark:bg-white/[0.02]">
+        <p className="text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed font-serif italic">
+          "{story}"
+        </p>
       </div>
       <div className="mt-5 pt-3 border-t border-zinc-100 dark:border-zinc-800/50">
         <p
@@ -276,7 +261,7 @@ function RecsSection({ promise }: { promise: ReturnType<typeof fetchRecommendati
           style={{ color: "var(--s-accent)" }}
         >
           <span className="w-1 h-1 rounded-full animate-pulse bg-current" />
-          Resolved after 1.8s
+          Resolved natively at the edge
         </p>
       </div>
     </section>
@@ -325,16 +310,16 @@ function ActivitySection({ promise }: { promise: ReturnType<typeof fetchActivity
   );
 }
 
-const CODE = `export async function loader() {
+const CODE = `export async function loader({ context }) {
+  const env = context.cloudflare.env;
   return {
     profile: fetchUserProfile(500),
-    analytics: fetchAnalytics(1000),
-    recommendations: fetchRecommendations(1800),
+    aiStory: env.AI.run("@cf/meta/llama-3-8b-instruct", { ... }),
     activities: fetchActivityFeed(2500),
   };
 }
 
 // Component — each section with Suspense
 <Suspense fallback={<Skeleton />}>
-  <Profile promise={loaderData.profile} />
+  <AIStorySection promise={loaderData.aiStory} />
 </Suspense>`;

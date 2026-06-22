@@ -7,6 +7,10 @@
   "name": "twister",
   "compatibility_date": "2026-06-20",
   "main": "./workers/app.ts",
+  "ai": { "binding": "AI" },
+  "kv_namespaces": [{ "binding": "TWISTER_KV", "id": "mock-id-1" }],
+  "d1_databases": [{ "binding": "DB", "database_name": "twister-db", "database_id": "mock-id-2" }],
+
   "vars": {
     "VALUE_FROM_CLOUDFLARE": "Hello from Cloudflare",
   },

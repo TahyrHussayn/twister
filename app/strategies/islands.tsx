@@ -20,35 +20,43 @@ export function meta() {
   ];
 }
 
-let globalComments = [
-  { id: "1", text: "Great architecture!" },
-  { id: "2", text: "Islands are the future" },
-];
-let globalLikes = 42;
-
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request, context }: Route.ActionArgs) {
+  const env = (context as any).cloudflare.env as Env;
   const formData = await request.formData();
   const intent = formData.get("intent") as string;
 
   if (intent === "comment") {
     const text = formData.get("comment") as string;
     if (text) {
-      globalComments.push({ id: Date.now().toString(36), text });
+      await env.DB.prepare("INSERT INTO comments (id, text) VALUES (?, ?)")
+        .bind(Date.now().toString(36), text)
+        .run();
     }
   } else if (intent === "like") {
-    globalLikes++;
+    await env.DB.prepare("UPDATE likes SET count = count + 1 WHERE id = 1").run();
   }
   return null;
 }
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request, context }: Route.LoaderArgs) {
+  const env = (context as any).cloudflare.env as Env;
+
+  const { results: comments } = await env.DB.prepare("SELECT * FROM comments").all<{
+    id: string;
+    text: string;
+  }>();
+  const likeResult = await env.DB.prepare("SELECT count FROM likes WHERE id = 1").first<{
+    count: number;
+  }>();
+  const likes = likeResult?.count ?? 42;
+
   return {
     profile: await fetchUserProfile(100),
     timestamp: fetchServerTimestamp(),
     metrics: createMetrics("Islands"),
     edgeInfo: getEdgeInfo(request),
-    comments: globalComments,
-    likes: globalLikes,
+    comments,
+    likes,
   };
 }
 

@@ -6,39 +6,40 @@ export type StrategyMeta = {
 export const STRATEGY_METADATA: Record<string, StrategyMeta> = {
   ssr: {
     isReal: true,
-    description: "Fully implemented using Cloudflare Workers per-request rendering.",
+    description:
+      "HTML rendered per-request on Cloudflare Workers with parallel data fetching at the edge.",
   },
   csr: {
     isReal: true,
-    description: "Real client-side React app fetching data via standard browser requests.",
+    description: "Standard client-side React app fetching data via browser requests.",
   },
   ssg: {
     isReal: true,
-    description: "Pre-rendered at build time with Vite+ and served natively from edge caches.",
+    description: "Pre-rendered at build time and served statically from edge caches.",
   },
   streaming: {
     isReal: true,
-    description: "Chunk-by-chunk HTML streaming supported natively by Workers.",
+    description: "Progressive HTML streaming using React Suspense.",
   },
   isr: {
     isReal: true,
-    description: "Uses Cloudflare Cache API for background revalidation.",
+    description: "On-demand cache revalidation using Cloudflare Cache API.",
   },
   ppr: {
     isReal: true,
-    description: "Combines edge caching for the shell with dynamic React Suspense holes.",
+    description: "Combines Cache API for the static shell with streaming for dynamic content.",
   },
   islands: {
     isReal: true,
-    description: "Progressive hydration using isolated React components.",
+    description: "Independent React components hydrating separately on a static page.",
   },
   hybrid: {
     isReal: true,
-    description: "Mixes SSG and SSR components using React Router v8 config.",
+    description: "Combines build-time prerendering with clientLoader for dynamic client-side data.",
   },
   htmx: {
     isReal: true,
-    description: "Client-side hypermedia driven swaps. Very lightweight.",
+    description: "Client-side hypermedia-driven swaps with lightweight server endpoints.",
   },
   "edge-vs-origin": {
     isReal: true,

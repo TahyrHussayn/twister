@@ -1,5 +1,4 @@
-import { NavLink } from "react-router";
-import { useState, useEffect } from "react";
+import { NavLink, useSearchParams } from "react-router";
 import { STRATEGY_ACCENTS } from "~/lib/theme";
 
 const LINKS = [
@@ -17,20 +16,25 @@ const LINKS = [
 ] as const;
 
 export function Nav() {
-  const [open, setOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const open = searchParams.get("menu") === "open";
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && open) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open]);
+  const toggleMenu = () => {
+    setSearchParams(
+      (prev) => {
+        if (open) {
+          prev.delete("menu");
+        } else {
+          prev.set("menu", "open");
+        }
+        return prev;
+      },
+      { preventScrollReset: true, replace: true },
+    );
+  };
 
   return (
-    <nav className="elite-nav">
+    <nav className="elite-nav backdrop-blur-3xl shadow-sm border-b-zinc-200/50 dark:border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
         <NavLink
           to="/"
@@ -71,7 +75,7 @@ export function Nav() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setOpen(!open)}
+            onClick={toggleMenu}
             aria-expanded={open}
             className="md:hidden p-2 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/40"
             aria-label="Toggle menu"
@@ -103,7 +107,6 @@ export function Nav() {
                   key={to}
                   to={to}
                   viewTransition
-                  onClick={() => setOpen(false)}
                   className={({ isActive }) =>
                     `px-3 py-3 rounded-lg text-sm font-medium transition-colors flex items-center gap-3 ${
                       isActive

@@ -94,4 +94,21 @@ Twister is styled using **Tailwind CSS v4** seamlessly integrated into Vite. The
 - **UI Integrity**: Added missing `.strat-*` glow variables to `app.css` and injected the missing `.stagger-8`, `.stagger-9`, and `.stagger-10` animation delay classes so the newest dashboard cards cascade flawlessly.
 - **Documentation Parity**: Updated code snippets (e.g., SSG configuration) to perfectly match the active, deployed `react-router.config.ts`.
 
-_Built with ❤️ utilizing React Router, Cloudflare Workers, and Vite+._
+### Phase 4: Peak Native Architecture (The "Best of the Best")
+
+- **Zero-Gimmick Implementations**: Completely overhauled PPR, Hybrid, HTMX, and Edge vs Origin strategies to use 100% native platform primitives instead of simulated `useEffect`/`useState` illusions.
+- **Cache API + Suspense (PPR)**: Refactored Partial Prerendering to query `caches.default` at the Edge for an instant static shell, while returning un-awaited deferred promises to stream in dynamic "holes" via `<Suspense>`.
+- **`clientLoader` Parity (Hybrid)**: Ripped out manual `useEffect` fetching and replaced it with React Router v8's native `clientLoader` paired with `HydrateFallback`, preserving the build-time SSG shell via `prerender` arrays.
+- **Server-side Benchmarking (Edge vs Origin)**: Shifted latency measuring entirely to the Cloudflare Worker itself using the `loader`, calculating true network differentials between the Edge and Origin servers.
+- **True Edge Metadata**: Injected Cloudflare's `request.cf` object into all server-side rendering strategies (SSR, ISR, Islands, Streaming) to dynamically render the exact `colo`, `country`, and `city` processing the request.
+- **HTMX vs `useFetcher` Parity**: Expanded the HTMX showcase with multi-endpoint demos and added a side-by-side comparison using RRv8's native `useFetcher()` to prove feature parity without locking into hypermedia libraries.
+
+### Phase 5: The "Hook-less" React Router v8 Architecture
+
+- **Total Elimination of `useState` & `useEffect`**: Systematically purged every instance of manual React state management across the entire application, proving that modern React architecture can be incredibly lean and powerful when utilizing the platform and framework correctly.
+- **URL-Driven State**: Refactored the mobile navigation menu, interactive `DynamicCounter` (PPR), `ShareIsland` notifications, and `TabsIsland` to rely exclusively on `useSearchParams`, completely eliminating component-level UI state.
+- **Optimistic UI without State**: Upgraded `LikeIsland` and `CommentsIsland` to use `<fetcher.Form>` and `fetcher.formData` to instantly project optimistic updates before the server responds, bypassing React local state.
+- **Client-Side Orchestration**: Added `clientAction` and `useActionData()` for CSR form validation and Hybrid LocalStorage syncing, removing the need for controlled inputs or effect-based network syncing.
+- **Pure CSS Animations**: Swapped the global `ProgressBar`'s effect-driven interval timing with native `useNavigation().state !== "idle"` CSS animations.
+
+_Built with ❤️ utilizing React Router v8, Cloudflare Workers, and Vite+._

@@ -43,8 +43,11 @@ export function StrategyPage({
     <div className={`space-y-10 strat-${strategy} strat-header-glow`}>
       {/* Premium hero banner */}
       <div
-        className="rounded-2xl border p-8 sm:p-10 -mx-2 sm:-mx-0 relative overflow-hidden"
-        style={{ backgroundColor: "var(--s-bg)", borderColor: "var(--s-border)" }}
+        className="rounded-3xl border p-8 sm:p-10 -mx-2 sm:-mx-0 relative overflow-hidden backdrop-blur-2xl shadow-xl transition-all"
+        style={{
+          backgroundColor: "color-mix(in srgb, var(--s-bg) 70%, transparent)",
+          borderColor: "var(--s-border)",
+        }}
       >
         <div
           className="absolute left-0 top-0 bottom-0 w-[3px]"

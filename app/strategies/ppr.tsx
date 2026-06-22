@@ -1,11 +1,13 @@
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, use } from "react";
+import { useSearchParams } from "react-router";
 import type { Route } from "./+types/ppr";
-import { fetchUserProfile, fetchRecommendations, fetchServerTimestamp } from "~/lib/data";
+import { fetchUserProfile, fetchRecommendations, type UserProfile } from "~/lib/data";
 import { createMetrics } from "~/lib/metrics";
 import { CodeSnippet } from "~/components/code-snippet";
 import { ComparisonPanel } from "~/components/comparison-panel";
 import { CardSkeleton } from "~/components/skeleton";
 import { StrategyPage, SectionDivider } from "~/components/strategy-page";
+import { getEdgeInfo } from "~/lib/edge-info";
 
 export function meta() {
   return [
@@ -18,36 +20,65 @@ export function meta() {
   ];
 }
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  const url = new URL(request.url);
+  const cacheKey = new Request(new URL("/api/profile", url.origin).toString(), {
+    method: "GET",
+  });
+
+  let profile: UserProfile;
+
+  const cache = typeof caches !== "undefined" ? caches.default : undefined;
+
+  if (cache) {
+    const cachedResponse = await cache.match(cacheKey);
+    if (cachedResponse) {
+      profile = await cachedResponse.json();
+    } else {
+      profile = await fetchUserProfile(50);
+      const response = new Response(JSON.stringify(profile), {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "s-maxage=3600",
+        },
+      });
+      await cache.put(cacheKey, response);
+    }
+  } else {
+    profile = await fetchUserProfile(50);
+  }
+
+  const recommendationsPromise = fetchRecommendations(1500);
+  const timestampPromise = new Promise<string>((resolve) =>
+    setTimeout(() => resolve(new Date().toISOString()), 800),
+  );
+
   return {
-    profile: await fetchUserProfile(50),
-    shellTimestamp: fetchServerTimestamp(),
+    profile,
+    recommendationsPromise,
+    timestampPromise,
+    edgeInfo: getEdgeInfo(request),
     metrics: createMetrics("PPR"),
   };
 }
 
 export default function PPR({ loaderData }: Route.ComponentProps) {
-  const { profile, shellTimestamp, metrics } = loaderData;
+  const { profile, recommendationsPromise, timestampPromise, edgeInfo, metrics } = loaderData;
 
   return (
     <StrategyPage
       strategy="ppr"
       title="Partial Prerendering"
       metrics={metrics}
-      description="Pre-rendered at build time into a static HTML shell. The profile below is baked in at build time. Dynamic sections are holes that load on the client after hydration — the shell renders instantly, holes fill in progressively."
+      description="Pre-rendered HTML shell served from the edge. The profile is cached at the edge. Dynamic sections are streamed in — the shell renders instantly, holes fill in progressively via Suspense."
     >
       <SectionDivider label="Request Lifecycle" />
 
       {/* Flow Diagram */}
       <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 p-8 rounded-2xl border border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-[#050505]">
         <div className="flow-step active">
-          <span className="text-lg">🏗️</span>
-          <span>Build: Static Shell</span>
-        </div>
-        <div className="flow-arrow active">→</div>
-        <div className="flow-step">
-          <span className="text-lg">📱</span>
-          <span>Request</span>
+          <span className="text-lg">🔎</span>
+          <span>Cache Check</span>
         </div>
         <div className="flow-arrow active">→</div>
         <div className="flow-step active">
@@ -57,7 +88,7 @@ export default function PPR({ loaderData }: Route.ComponentProps) {
         <div className="flow-arrow active">→</div>
         <div className="flow-step active">
           <span className="text-lg">🧩</span>
-          <span>Dynamic Holes Fill</span>
+          <span>Stream Holes</span>
         </div>
       </div>
 
@@ -75,7 +106,7 @@ export default function PPR({ loaderData }: Route.ComponentProps) {
           <span className="text-sm">💡</span>
         </div>
         <p className="font-medium text-xs leading-relaxed" style={{ color: "var(--s-text)" }}>
-          Static shell baked at build time — dynamic holes fill in on client navigation.
+          Static shell served from Edge Cache — dynamic holes streamed in via Suspense.
         </p>
       </div>
 
@@ -99,7 +130,7 @@ export default function PPR({ loaderData }: Route.ComponentProps) {
           >
             STATIC SHELL
           </span>
-          User Profile (Pre-rendered)
+          User Profile (Edge Cached)
         </h2>
         <div className="flex items-center gap-5 relative z-10">
           <img
@@ -112,20 +143,35 @@ export default function PPR({ loaderData }: Route.ComponentProps) {
             <p className="text-sm text-zinc-500">{profile.email}</p>
           </div>
         </div>
-        <div className="mt-5 pt-3 border-t border-zinc-100 dark:border-zinc-800/50 relative z-10">
+        <div className="mt-5 pt-3 border-t border-zinc-100 dark:border-zinc-800/50 relative z-10 flex flex-wrap gap-4 justify-between items-center">
           <p className="text-[10px] font-bold tracking-wider uppercase flex items-center gap-1.5 text-zinc-500">
             <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
-            Frozen at build time
+            Cached at Edge
           </p>
+
+          <div className="flex items-center gap-3 text-xs text-zinc-500">
+            <div className="flex items-center gap-1.5" title="Edge Colo">
+              <span className="text-rose-500">📍</span>
+              <span className="font-mono">{edgeInfo.colo}</span>
+            </div>
+            <div className="flex items-center gap-1.5" title="Country">
+              <span className="text-rose-500">🌍</span>
+              <span className="font-mono">{edgeInfo.country}</span>
+            </div>
+            <div className="flex items-center gap-1.5" title="City">
+              <span className="text-rose-500">🏙️</span>
+              <span className="font-mono">{edgeInfo.city}</span>
+            </div>
+          </div>
         </div>
       </section>
 
       <div className="grid gap-6 sm:grid-cols-2">
         <Suspense fallback={<CardSkeleton />}>
-          <DynamicRecs />
+          <DynamicRecs recommendationsPromise={recommendationsPromise} />
         </Suspense>
         <Suspense fallback={<CardSkeleton />}>
-          <DynamicTimestamp />
+          <DynamicTimestamp timestampPromise={timestampPromise} />
         </Suspense>
       </div>
       <div className="mt-6">
@@ -134,14 +180,10 @@ export default function PPR({ loaderData }: Route.ComponentProps) {
         </Suspense>
       </div>
 
-      <p className="text-center text-[11px] font-mono font-medium text-zinc-500 py-6">
-        Shell build timestamp: <span style={{ color: "var(--s-text)" }}>{shellTimestamp}</span>
-      </p>
-
       <SectionDivider label="When to use it" />
       <ComparisonPanel
-        pros={["Instant static shell", "Dynamic content on client", "Great LCP scores"]}
-        cons={["Client JS required for holes", "Setup complexity", "Not all frameworks support it"]}
+        pros={["Instant static shell", "Dynamic content streamed", "Great LCP & TTFB"]}
+        cons={["Complex cache invalidation", "Requires Edge infrastructure", "More moving parts"]}
         related={[
           { to: "/ssg", label: "SSG", key: "SSG" },
           { to: "/streaming", label: "Streaming", key: "Streaming" },
@@ -152,11 +194,12 @@ export default function PPR({ loaderData }: Route.ComponentProps) {
   );
 }
 
-function DynamicRecs() {
-  const [data, setData] = useState<Awaited<ReturnType<typeof fetchRecommendations>> | null>(null);
-  useEffect(() => {
-    void fetchRecommendations(1500).then(setData);
-  }, []);
+function DynamicRecs({
+  recommendationsPromise,
+}: {
+  recommendationsPromise: Promise<Awaited<ReturnType<typeof fetchRecommendations>>>;
+}) {
+  const data = use(recommendationsPromise);
   return (
     <section className="relative overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-[#050505] p-6 shadow-sm transition-shadow hover:shadow-md h-full">
       <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
@@ -166,46 +209,32 @@ function DynamicRecs() {
         </span>
         Recommendations
       </h2>
-      {data ? (
-        <div className="grid gap-3">
-          {data.map((r) => (
-            <div
-              key={r.id}
-              className="rounded-xl border border-zinc-200/60 dark:border-white/5 bg-zinc-50/50 dark:bg-white/[0.02] p-3 transition-colors hover:bg-zinc-100/50 dark:hover:bg-white/[0.04]"
-            >
-              <p className="font-bold text-xs text-zinc-900 dark:text-zinc-100 mb-1.5 leading-snug">
-                {r.title}
-              </p>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-                  {r.category}
-                </span>
-                <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 px-1.5 py-0.5 rounded">
-                  {(r.score * 100).toFixed(0)}%
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="flex items-center justify-center py-12">
+      <div className="grid gap-3">
+        {data.map((r) => (
           <div
-            role="status"
-            aria-label="Loading"
-            className="animate-spin h-6 w-6 border-2 border-rose-500 border-t-transparent rounded-full"
-          />
-        </div>
-      )}
+            key={r.id}
+            className="rounded-xl border border-zinc-200/60 dark:border-white/5 bg-zinc-50/50 dark:bg-white/[0.02] p-3 transition-colors hover:bg-zinc-100/50 dark:hover:bg-white/[0.04]"
+          >
+            <p className="font-bold text-xs text-zinc-900 dark:text-zinc-100 mb-1.5 leading-snug">
+              {r.title}
+            </p>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                {r.category}
+              </span>
+              <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 px-1.5 py-0.5 rounded">
+                {(r.score * 100).toFixed(0)}%
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
 
-function DynamicTimestamp() {
-  const [ts, setTs] = useState<string | null>(null);
-  useEffect(() => {
-    const t = setTimeout(() => setTs(new Date().toISOString()), 800);
-    return () => clearTimeout(t);
-  }, []);
+function DynamicTimestamp({ timestampPromise }: { timestampPromise: Promise<string> }) {
+  const ts = use(timestampPromise);
   return (
     <section className="relative overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-[#050505] p-6 shadow-sm transition-shadow hover:shadow-md h-full flex flex-col">
       <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-bl-full -mr-4 -mt-4" />
@@ -216,26 +245,14 @@ function DynamicTimestamp() {
         Live Edge Timestamp
       </h2>
       <div className="flex-1 flex flex-col justify-center items-center py-6">
-        {ts ? (
-          <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 w-full text-center">
-            <code className="text-sm font-mono font-bold text-rose-600 dark:text-rose-400">
-              {ts}
-            </code>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-14">
-            <div
-              role="status"
-              aria-label="Loading"
-              className="animate-spin h-5 w-5 border-2 border-rose-500 border-t-transparent rounded-full"
-            />
-          </div>
-        )}
+        <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 w-full text-center">
+          <code className="text-sm font-mono font-bold text-rose-600 dark:text-rose-400">{ts}</code>
+        </div>
       </div>
       <div className="mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800/50 relative z-10">
         <p className="text-[10px] font-bold tracking-wider uppercase flex items-center gap-1.5 text-zinc-500">
           <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
-          Computed client-side
+          Streamed from server
         </p>
       </div>
     </section>
@@ -243,7 +260,19 @@ function DynamicTimestamp() {
 }
 
 function DynamicCounter() {
-  const [count, setCount] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const count = Number(searchParams.get("count") || "0");
+
+  const increment = () => {
+    setSearchParams(
+      (prev) => {
+        prev.set("count", String(count + 1));
+        return prev;
+      },
+      { replace: true, preventScrollReset: true },
+    );
+  };
+
   return (
     <section className="relative overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-[#050505] p-6 shadow-sm transition-shadow hover:shadow-md">
       <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 rounded-bl-full -mr-8 -mt-8" />
@@ -251,7 +280,7 @@ function DynamicCounter() {
         <span className="inline-flex px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase border border-rose-200/50 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400">
           DYNAMIC HOLE
         </span>
-        Client-Side Counter
+        URL-Driven Counter
       </h2>
       <div className="flex items-center justify-between bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 relative z-10">
         <div className="flex items-center gap-3">
@@ -264,7 +293,7 @@ function DynamicCounter() {
         </div>
         <button
           type="button"
-          onClick={() => setCount((c) => c + 1)}
+          onClick={increment}
           className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold transition-all shadow-sm shadow-rose-500/20"
         >
           Increment
@@ -280,17 +309,40 @@ function DynamicCounter() {
   );
 }
 
-const CODE = `// react-router.config.ts
-prerender: ["/ppr"]
+const CODE = `// app/strategies/ppr.tsx
+export async function loader({ request }: Route.LoaderArgs) {
+  // 1. Check Edge Cache for static shell data
+  const cache = caches.default;
+  const cacheKey = new Request(new URL("/api/profile", request.url));
+  
+  let profile;
+  const cached = await cache.match(cacheKey);
+  
+  if (cached) {
+    profile = await cached.json();
+  } else {
+    profile = await fetchUserProfile(50);
+    await cache.put(cacheKey, new Response(JSON.stringify(profile), {
+      headers: { "Content-Type": "application/json", "Cache-Control": "s-maxage=3600" }
+    }));
+  }
 
-export async function loader() {
-  // Static shell data baked at build time
-  return { profile: await fetchUserProfile() };
+  // 2. Return un-awaited promises for dynamic holes
+  return {
+    profile,
+    recommendationsPromise: fetchRecommendations(1500),
+    timestampPromise: new Promise(res => setTimeout(() => res(new Date().toISOString()), 800))
+  };
 }
 
-// Dynamic holes load on client
-function DynamicHole() {
-  const [data, setData] = useState(null);
-  useEffect(() => { fetchData().then(setData); }, []);
-  return data ? <Content /> : <Spinner />;
+// 3. Render shell instantly, stream holes via Suspense
+export default function PPR({ loaderData }: Route.ComponentProps) {
+  return (
+    <>
+      <StaticProfileShell profile={loaderData.profile} />
+      <Suspense fallback={<Skeleton />}>
+        <DynamicRecs recommendationsPromise={loaderData.recommendationsPromise} />
+      </Suspense>
+    </>
+  );
 }`;

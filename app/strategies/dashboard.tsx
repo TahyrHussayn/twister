@@ -1,5 +1,5 @@
-import { Link } from "react-router";
-import { useState } from "react";
+import { Link, useFetcher } from "react-router";
+
 import { createMetrics } from "~/lib/metrics";
 import { STRATEGY_ACCENTS } from "~/lib/theme";
 import { CacheBadge } from "~/components/metrics-badge";
@@ -123,36 +123,33 @@ type BenchResult = {
   url: string;
   ttfb: number;
   status: number;
-  cacheStatus?: any;
+  cacheStatus?: string | null;
   error?: string;
 };
 
-export default function Dashboard() {
-  const [results, setResults] = useState<BenchResult[] | null>(null);
-  const [running, setRunning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+type BenchmarkData = {
+  error?: string;
+  results?: BenchResult[];
+  timestamp?: string;
+};
 
-  const runBenchmark = async () => {
-    setRunning(true);
-    setError(null);
-    setResults(null);
-    try {
-      const res = await fetch("/api/benchmark", { method: "POST" });
-      if (!res.ok) throw new Error(`Benchmark failed (${res.status})`);
-      const json = (await res.json()) as { results: BenchResult[]; timestamp: string };
-      setResults(json.results);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown error");
-    } finally {
-      setRunning(false);
-    }
+export default function Dashboard() {
+  const fetcher = useFetcher<BenchmarkData>();
+  const isRunning = fetcher.state !== "idle";
+  const error = fetcher.data?.error;
+  const results = fetcher.data?.results;
+
+  const runBenchmark = () => {
+    void fetcher.submit(null, { method: "POST", action: "/api/benchmark" });
   };
 
   const sortedResults = results
     ? [...results].sort((a, b) => (a.ttfb === -1 ? 9999 : a.ttfb) - (b.ttfb === -1 ? 9999 : b.ttfb))
     : [];
 
-  const maxTtfb = results ? Math.max(...results.map((r) => (r.ttfb > 0 ? r.ttfb : 0))) : 100;
+  const maxTtfb = results
+    ? Math.max(...results.map((r: BenchResult) => (r.ttfb > 0 ? r.ttfb : 0)))
+    : 100;
 
   return (
     <div className="space-y-16 pb-16 pt-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -163,9 +160,9 @@ export default function Dashboard() {
             className="text-transparent bg-clip-text"
             style={{
               backgroundImage:
-                "linear-gradient(to right, #3b82f6, #8b5cf6, #ec4899, #f59e0b, #10b981, #06b6d4)",
+                "linear-gradient(to right, #3b82f6, #c084fc, #f43f5e, #f59e0b, #10b981, #06b6d4)",
               backgroundSize: "200% auto",
-              animation: "shimmer 5s linear infinite",
+              animation: "shimmer 4s linear infinite",
             }}
           >
             Twister
@@ -192,10 +189,10 @@ export default function Dashboard() {
           <button
             type="button"
             onClick={runBenchmark}
-            disabled={running}
+            disabled={isRunning}
             className="group relative px-6 py-2.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold text-sm hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none shadow-[0_0_20px_rgba(255,255,255,0.1)] dark:shadow-[0_0_20px_rgba(255,255,255,0.3)]"
           >
-            {running ? "Running..." : "Run Benchmark"}
+            {isRunning ? "Running..." : "Run Benchmark"}
           </button>
         </div>
 
@@ -205,7 +202,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!results && !error && !running && (
+        {!results && !error && !isRunning && (
           <div className="rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-800 p-12 text-center text-zinc-500 dark:text-zinc-400 bg-zinc-50/50 dark:bg-zinc-900/20">
             <svg
               className="w-8 h-8 mx-auto mb-3 opacity-50"
@@ -229,7 +226,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {running && (
+        {isRunning && (
           <div className="space-y-4 py-4">
             {STRATEGIES.map((_, i) => (
               <div key={i} className="flex items-center gap-4">
@@ -246,7 +243,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {results && !running && (
+        {results && !isRunning && (
           <div className="space-y-5 animate-in fade-in duration-500">
             {sortedResults.map((r, i) => {
               const accent = STRATEGY_ACCENTS[r.strategy] || STRATEGY_ACCENTS.SSR;
@@ -317,7 +314,7 @@ export default function Dashboard() {
               to={s.to}
               viewTransition
               prefetch="intent"
-              className={`relative flex flex-col rounded-3xl border bg-white dark:bg-[#050505] p-6 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 overflow-hidden group/card animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both ${s.delay} ${s.style} strat-header-glow`}
+              className={`relative flex flex-col rounded-3xl border bg-white/80 dark:bg-[#050505]/80 backdrop-blur-md p-6 shadow-sm transition-all hover:shadow-2xl overflow-hidden group/card animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both ${s.delay} ${s.style} strat-header-glow card-tilt`}
               style={{
                 borderColor: `var(--s-border, ${accent.hex}30)`,
               }}

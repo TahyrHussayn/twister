@@ -1,4 +1,5 @@
 import type { Route } from "./+types/csr";
+import { Form, useActionData, useNavigation } from "react-router";
 import { createMetrics } from "~/lib/metrics";
 import { CodeSnippet } from "~/components/code-snippet";
 import { ComparisonPanel } from "~/components/comparison-panel";
@@ -42,6 +43,20 @@ export async function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
   return { ...serverData, ...clientData };
 }
 clientLoader.hydrate = true as const;
+
+export async function clientAction({ request }: Route.ClientActionArgs) {
+  const formData = await request.formData();
+  const feedback = formData.get("feedback") as string;
+
+  // Simulate network delay
+  await new Promise((r) => setTimeout(r, 600));
+
+  if (!feedback || feedback.length < 10) {
+    return { error: "Feedback must be at least 10 characters long to be useful!" };
+  }
+
+  return { success: true, message: "Thanks for the feedback!" };
+}
 
 export function HydrateFallback() {
   return (
@@ -90,6 +105,9 @@ export default function CSR({ loaderData }: Route.ComponentProps) {
   const { metrics, message, items, timestamp } = loaderData as ClientData & {
     metrics: ReturnType<typeof createMetrics>;
   };
+  const actionData = useActionData<typeof clientAction>();
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting" && navigation.formAction === "/csr";
 
   return (
     <StrategyPage
@@ -195,6 +213,59 @@ export default function CSR({ loaderData }: Route.ComponentProps) {
       <p className="text-center text-[11px] font-mono font-medium text-zinc-500 py-6">
         Client fetch completed: <span style={{ color: "var(--s-text)" }}>{timestamp}</span>
       </p>
+
+      <SectionDivider label="Client-Side Form Validation" />
+      <div className="max-w-2xl mx-auto rounded-2xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-[#050505] p-6 sm:p-8 shadow-sm">
+        <h3 className="font-bold text-lg mb-2 text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+          <span className="text-xl">📝</span> Provide Feedback
+        </h3>
+        <p className="text-sm text-zinc-500 mb-6 font-medium">
+          Demonstrates{" "}
+          <code className="text-[10px] font-mono text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-1 py-0.5 rounded">
+            clientAction
+          </code>{" "}
+          and{" "}
+          <code className="text-[10px] font-mono text-purple-500 bg-purple-50 dark:bg-purple-900/20 px-1 py-0.5 rounded">
+            useActionData
+          </code>{" "}
+          for hook-less form validation.
+        </p>
+
+        <Form method="post" className="space-y-4">
+          <div>
+            <textarea
+              name="feedback"
+              placeholder="What do you think of this CSR strategy?..."
+              className={`w-full min-h-[100px] px-4 py-3 text-sm font-medium rounded-xl border bg-zinc-50 dark:bg-zinc-900/50 focus:outline-none focus:ring-2 transition-colors placeholder:text-zinc-400 ${
+                actionData?.error
+                  ? "border-rose-500 focus:ring-rose-500/50"
+                  : "border-zinc-200 dark:border-zinc-800 focus:ring-blue-500/50"
+              }`}
+            />
+            {actionData?.error && (
+              <p className="mt-2 text-xs font-bold text-rose-500 flex items-center gap-1.5 animate-in slide-in-from-top-1">
+                <span className="w-1 h-1 rounded-full bg-rose-500" />
+                {actionData.error}
+              </p>
+            )}
+            {actionData?.success && (
+              <p className="mt-2 text-xs font-bold text-emerald-500 flex items-center gap-1.5 animate-in slide-in-from-top-1">
+                <span className="w-1 h-1 rounded-full bg-emerald-500" />
+                {actionData.message}
+              </p>
+            )}
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-6 py-2.5 rounded-xl font-bold text-xs bg-zinc-900 dark:bg-white text-white dark:text-black hover:scale-105 active:scale-95 transition-all shadow-sm disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {isSubmitting ? "Validating..." : "Submit Feedback"}
+            </button>
+          </div>
+        </Form>
+      </div>
 
       <SectionDivider label="When to use it" />
       <ComparisonPanel

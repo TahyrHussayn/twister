@@ -7,7 +7,6 @@ import {
   ScrollRestoration,
   useNavigation,
 } from "react-router";
-import { useEffect, useState } from "react";
 
 import type { Route } from "./+types/root";
 import { Nav } from "./components/nav";
@@ -22,44 +21,25 @@ export const links: Route.LinksFunction = () => [
   },
   {
     rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@400;700&display=swap",
+    href: "https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=JetBrains+Mono:wght@400;700&display=swap",
   },
 ];
 
 function ProgressBar() {
   const navigation = useNavigation();
   const active = navigation.state !== "idle";
-  const [complete, setComplete] = useState(false);
-  const [show, setShow] = useState(false);
-
-  useEffect(() => {
-    if (active) {
-      setShow(true);
-      setComplete(false);
-    } else if (show) {
-      setComplete(true);
-      const timeout = setTimeout(() => {
-        setShow(false);
-      }, 400); // Allow time for the bar to hit 100% and fade out
-      return () => clearTimeout(timeout);
-    }
-  }, [active, show]);
-
-  if (!show) return null;
 
   return (
     <div
-      className="fixed top-0 left-0 w-full h-[2px] z-[100] pointer-events-none transition-opacity duration-300"
-      style={{ opacity: complete ? 0 : 1 }}
+      className={`fixed top-0 left-0 w-full h-[2px] z-[100] pointer-events-none transition-opacity duration-300 ${active ? "opacity-100" : "opacity-0"}`}
     >
       <div
         className="h-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.5)] origin-left"
         style={{
-          transform: complete ? "scaleX(1)" : "scaleX(0)",
-          animation: complete
-            ? "none"
-            : "progress-bar-loading 10s cubic-bezier(0.075, 0.82, 0.165, 1) forwards",
-          transition: complete ? "transform 0.2s ease-out" : "none",
+          transform: "scaleX(0)",
+          animation: active
+            ? "progress-bar-loading 10s cubic-bezier(0.075, 0.82, 0.165, 1) forwards"
+            : "none",
         }}
       />
     </div>
@@ -78,6 +58,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <ProgressBar />
+        <div className="mesh-bg" />
         <div className="elite-bg" />
         <Nav />
         {children}

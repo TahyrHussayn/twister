@@ -1,6 +1,8 @@
 import type { Route } from "./+types/isr";
+import { useFetcher } from "react-router";
 import { fetchProductList, fetchServerTimestamp } from "~/lib/data";
 import { getCachedResponse, putCacheEntry, type CacheStatus } from "~/lib/cache";
+import { getEdgeInfo } from "~/lib/edge-info";
 import { createMetrics } from "~/lib/metrics";
 import { CodeSnippet } from "~/components/code-snippet";
 import { ComparisonPanel } from "~/components/comparison-panel";
@@ -31,6 +33,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       timestamp: json.timestamp,
       metrics: { ...createMetrics("ISR"), ttfb: Date.now() - start },
       cacheStatus: status,
+      edgeInfo: getEdgeInfo(request),
     };
   }
 
@@ -45,11 +48,14 @@ export async function loader({ request }: Route.LoaderArgs) {
     timestamp,
     metrics: { ...createMetrics("ISR"), ttfb: Date.now() - start },
     cacheStatus: "MISS" as CacheStatus,
+    edgeInfo: getEdgeInfo(request),
   };
 }
 
 export default function ISR({ loaderData }: Route.ComponentProps) {
-  const { products, timestamp, metrics, cacheStatus } = loaderData;
+  const { products, timestamp, metrics, cacheStatus, edgeInfo } = loaderData;
+  const fetcher = useFetcher();
+  const isPurging = fetcher.state !== "idle";
 
   return (
     <StrategyPage
@@ -120,7 +126,7 @@ export default function ISR({ loaderData }: Route.ComponentProps) {
 
       <SectionDivider label="Cache controls" />
       <div className="grid gap-6 sm:grid-cols-3">
-        <form
+        <fetcher.Form
           method="post"
           action="/api/purge"
           className="rounded-2xl border bg-white dark:bg-[#050505] p-6 shadow-sm relative overflow-hidden"
@@ -141,16 +147,17 @@ export default function ISR({ loaderData }: Route.ComponentProps) {
           <input type="hidden" name="redirect" value="/isr" />
           <button
             type="submit"
-            className="w-full px-4 py-2.5 rounded-xl text-white text-xs font-bold transition-transform hover:scale-105 active:scale-95 shadow-sm"
+            disabled={isPurging}
+            className="w-full px-4 py-2.5 rounded-xl text-white text-xs font-bold transition-transform hover:scale-105 active:scale-95 shadow-sm disabled:opacity-70 disabled:pointer-events-none"
             style={{ backgroundColor: "var(--s-accent)" }}
           >
-            Purge /isr
+            {isPurging ? "Purging..." : "Purge /isr"}
           </button>
           <p className="text-[10px] text-zinc-500 mt-4 leading-relaxed font-medium">
             Clears CDN cache. Refresh after purging to see a{" "}
             <span className="text-rose-500 font-bold">MISS</span>.
           </p>
-        </form>
+        </fetcher.Form>
 
         <div
           className="rounded-2xl border bg-white dark:bg-[#050505] p-6 shadow-sm relative overflow-hidden"
@@ -282,11 +289,17 @@ export default function ISR({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      <p className="text-center text-[11px] font-mono font-medium text-zinc-500 py-6">
-        Rendered at: <span style={{ color: "var(--s-text)" }}>{timestamp}</span> · Cache:{" "}
-        <span className="font-bold">{cacheStatus}</span> · TTFB:{" "}
-        <span style={{ color: "var(--s-text)" }}>{metrics.ttfb}ms</span>
-      </p>
+      <div className="flex flex-col items-center gap-3 py-6">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-white/5 bg-white dark:bg-[#050505] text-[11px] font-mono text-zinc-500 shadow-sm">
+          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          Served from {edgeInfo.colo} ({edgeInfo.city}, {edgeInfo.country})
+        </div>
+        <p className="text-center text-[11px] font-mono font-medium text-zinc-500">
+          Rendered at: <span style={{ color: "var(--s-text)" }}>{timestamp}</span> · Cache:{" "}
+          <span className="font-bold">{cacheStatus}</span> · TTFB:{" "}
+          <span style={{ color: "var(--s-text)" }}>{metrics.ttfb}ms</span>
+        </p>
+      </div>
 
       <SectionDivider label="When to use it" />
       <ComparisonPanel

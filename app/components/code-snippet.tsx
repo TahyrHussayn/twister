@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { STRATEGY_ACCENTS } from "~/lib/theme";
 
 export function CodeSnippet({
@@ -12,15 +11,20 @@ export function CodeSnippet({
   filename?: string;
   strategy?: string;
 }) {
-  const [copied, setCopied] = useState(false);
-
-  const copy = () => {
-    void navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const accent = strategy ? STRATEGY_ACCENTS[strategy]?.hex : undefined;
+
+  const copy = (e: React.MouseEvent<HTMLButtonElement>) => {
+    void navigator.clipboard.writeText(code);
+    const btn = e.currentTarget;
+    btn.textContent = "Copied!";
+    btn.style.color = accent || "#10b981";
+    btn.style.backgroundColor = accent ? `${accent}15` : "rgba(16, 185, 129, 0.1)";
+    setTimeout(() => {
+      btn.textContent = "Copy";
+      btn.style.color = "#71717a";
+      btn.style.backgroundColor = "transparent";
+    }, 2000);
+  };
 
   return (
     <div
@@ -68,15 +72,11 @@ export function CodeSnippet({
           aria-label="Copy code"
           className="text-xs font-medium px-2 py-1 rounded-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/40 hover:bg-zinc-800"
           style={{
-            color: copied ? accent || "#10b981" : "#71717a",
-            backgroundColor: copied
-              ? accent
-                ? `${accent}15`
-                : "rgba(16, 185, 129, 0.1)"
-              : "transparent",
+            color: "#71717a",
+            backgroundColor: "transparent",
           }}
         >
-          {copied ? "Copied!" : "Copy"}
+          Copy
         </button>
       </div>
       <pre className="p-5 overflow-x-auto text-sm leading-relaxed">

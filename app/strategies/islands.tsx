@@ -1,6 +1,8 @@
-import { Suspense, useState, useEffect } from "react";
+import { Suspense } from "react";
+import { useSearchParams, Form, useSubmit, useFetcher } from "react-router";
 import type { Route } from "./+types/islands";
 import { fetchUserProfile, fetchServerTimestamp } from "~/lib/data";
+import { getEdgeInfo } from "~/lib/edge-info";
 import { createMetrics } from "~/lib/metrics";
 import { CodeSnippet } from "~/components/code-snippet";
 import { ComparisonPanel } from "~/components/comparison-panel";
@@ -17,16 +19,40 @@ export function meta() {
   ];
 }
 
-export async function loader() {
+let globalComments = [
+  { id: "1", text: "Great architecture!" },
+  { id: "2", text: "Islands are the future" },
+];
+let globalLikes = 42;
+
+export async function action({ request }: Route.ActionArgs) {
+  const formData = await request.formData();
+  const intent = formData.get("intent") as string;
+
+  if (intent === "comment") {
+    const text = formData.get("comment") as string;
+    if (text) {
+      globalComments.push({ id: Date.now().toString(36), text });
+    }
+  } else if (intent === "like") {
+    globalLikes++;
+  }
+  return null;
+}
+
+export async function loader({ request }: Route.LoaderArgs) {
   return {
     profile: await fetchUserProfile(100),
     timestamp: fetchServerTimestamp(),
     metrics: createMetrics("Islands"),
+    edgeInfo: getEdgeInfo(request),
+    comments: globalComments,
+    likes: globalLikes,
   };
 }
 
 export default function Islands({ loaderData }: Route.ComponentProps) {
-  const { profile, timestamp, metrics } = loaderData;
+  const { profile, timestamp, metrics, edgeInfo } = loaderData;
 
   return (
     <StrategyPage
@@ -82,13 +108,13 @@ export default function Islands({ loaderData }: Route.ComponentProps) {
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-6">
         <Suspense fallback={<SpinnerShell title="Like Button" />}>
-          <LikeIsland />
+          <LikeIsland serverLikes={loaderData.likes} />
         </Suspense>
         <Suspense fallback={<SpinnerShell title="Clock" />}>
-          <ClockIsland />
+          <PingIsland />
         </Suspense>
         <Suspense fallback={<SpinnerShell title="Comments" />}>
-          <CommentsIsland />
+          <CommentsIsland comments={loaderData.comments} />
         </Suspense>
         <Suspense fallback={<SpinnerShell title="Share" />}>
           <ShareIsland />
@@ -124,10 +150,16 @@ export default function Islands({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      <p className="text-center text-[11px] font-mono font-medium text-zinc-500 py-6">
-        Server timestamp: <span style={{ color: "var(--s-text)" }}>{timestamp}</span> · Each island
-        ships its own JS bundle
-      </p>
+      <div className="flex flex-col items-center gap-3 py-6">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-white/5 bg-white dark:bg-[#050505] text-[11px] font-mono text-zinc-500 shadow-sm">
+          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          Served from {edgeInfo.colo} ({edgeInfo.city}, {edgeInfo.country})
+        </div>
+        <p className="text-center text-[11px] font-mono font-medium text-zinc-500">
+          Server timestamp: <span style={{ color: "var(--s-text)" }}>{timestamp}</span> · Each
+          island ships its own JS bundle
+        </p>
+      </div>
 
       <SectionDivider label="When to use it" />
       <ComparisonPanel
@@ -152,8 +184,11 @@ function SpinnerShell({ title }: { title: string }) {
   );
 }
 
-function LikeIsland() {
-  const [likes, setLikes] = useState(42);
+function LikeIsland({ serverLikes }: { serverLikes: number }) {
+  const fetcher = useFetcher();
+  const isLiking = fetcher.formData?.get("intent") === "like";
+  const optimisticLikes = serverLikes + (isLiking ? 1 : 0);
+
   return (
     <div
       className="rounded-2xl border bg-white dark:bg-[#050505] p-6 text-center shadow-sm transition-all hover:shadow-md flex flex-col h-40"
@@ -163,29 +198,32 @@ function LikeIsland() {
         className="text-[10px] font-bold uppercase tracking-wider mb-auto"
         style={{ color: "var(--s-accent)" }}
       >
-        🏝️ Like Button
+        🏝️ Fetcher Like Button
       </p>
       <div className="flex justify-center mt-auto">
-        <button
-          type="button"
-          onClick={() => setLikes((l) => l + 1)}
-          className="inline-flex items-center justify-center gap-2.5 px-6 py-2.5 rounded-xl font-bold transition-transform hover:scale-105 active:scale-95 shadow-sm"
-          style={{ backgroundColor: "var(--s-bg)", color: "var(--s-text)" }}
-        >
-          <span className="text-lg">❤️</span>
-          <span className="text-base">{likes}</span>
-        </button>
+        <fetcher.Form method="post">
+          <input type="hidden" name="intent" value="like" />
+          <button
+            type="submit"
+            className={`inline-flex items-center justify-center gap-2.5 px-6 py-2.5 rounded-xl font-bold transition-transform shadow-sm ${
+              isLiking ? "scale-110" : "hover:scale-105 active:scale-95"
+            }`}
+            style={{ backgroundColor: "var(--s-bg)", color: "var(--s-text)" }}
+          >
+            <span className="text-lg">❤️</span>
+            <span className="text-base">{optimisticLikes}</span>
+          </button>
+        </fetcher.Form>
       </div>
     </div>
   );
 }
 
-function ClockIsland() {
-  const [time, setTime] = useState(new Date());
-  useEffect(() => {
-    const id = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
+function PingIsland() {
+  const fetcher = useFetcher();
+  const isPinging = fetcher.state !== "idle";
+  const timestamp = fetcher.data ? new Date().toLocaleTimeString() : "--:--:--";
+
   return (
     <div
       className="rounded-2xl border bg-white dark:bg-[#050505] p-6 text-center shadow-sm transition-all hover:shadow-md flex flex-col h-40"
@@ -195,29 +233,36 @@ function ClockIsland() {
         className="text-[10px] font-bold uppercase tracking-wider mb-auto"
         style={{ color: "var(--s-accent)" }}
       >
-        🏝️ Live Clock
+        🏝️ Edge Ping
       </p>
-      <div className="mt-auto mb-2 py-2 px-4 rounded-xl border border-zinc-100 dark:border-zinc-800/50 bg-zinc-50 dark:bg-zinc-900/50 inline-block mx-auto">
-        <p className="text-2xl font-mono font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-          {time.toLocaleTimeString()}
-        </p>
+      <div className="mt-auto mb-2 flex flex-col gap-2">
+        <button
+          onClick={() => fetcher.load("/api/benchmark")}
+          disabled={isPinging}
+          className="px-4 py-1.5 rounded-lg text-xs font-bold text-white transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+          style={{ backgroundColor: "var(--s-accent)" }}
+        >
+          {isPinging ? "Pinging..." : "Ping Server"}
+        </button>
+        <p className="text-[10px] font-mono font-medium text-zinc-500">Last ping: {timestamp}</p>
       </div>
     </div>
   );
 }
 
-function CommentsIsland() {
-  const [comments, setComments] = useState<{ id: string; text: string }[]>([
-    { id: "1", text: "Great architecture!" },
-    { id: "2", text: "Islands are the future" },
-  ]);
-  const [input, setInput] = useState("");
-  const add = () => {
-    if (input.trim()) {
-      setComments((c) => [...c, { id: Date.now().toString(36), text: input }]);
-      setInput("");
-    }
-  };
+function CommentsIsland({ comments }: { comments: { id: string; text: string }[] }) {
+  const fetcher = useFetcher();
+  const isSubmitting = fetcher.state === "submitting";
+
+  // Optimistic UI for comments
+  const optimisticComments = [...comments];
+  if (isSubmitting && fetcher.formData?.get("comment")) {
+    optimisticComments.push({
+      id: "optimistic",
+      text: fetcher.formData.get("comment") as string,
+    });
+  }
+
   return (
     <div
       className="rounded-2xl border bg-white dark:bg-[#050505] p-5 shadow-sm transition-all hover:shadow-md flex flex-col h-40 row-span-2 sm:row-span-1 sm:col-span-2 lg:col-span-1"
@@ -227,43 +272,45 @@ function CommentsIsland() {
         className="text-[10px] font-bold uppercase tracking-wider mb-3 text-center"
         style={{ color: "var(--s-accent)" }}
       >
-        🏝️ Comments
+        🏝️ Fetcher Comments
       </p>
       <div className="space-y-2 mb-3 overflow-y-auto flex-1 text-xs pr-1 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-700">
-        {[...comments].reverse().map((c) => (
+        {[...optimisticComments].reverse().map((c) => (
           <div
             key={c.id}
-            className="rounded-lg bg-zinc-50 dark:bg-zinc-900/50 px-3 py-2 border border-zinc-100 dark:border-zinc-800/50"
+            className={`rounded-lg bg-zinc-50 dark:bg-zinc-900/50 px-3 py-2 border border-zinc-100 dark:border-zinc-800/50 transition-opacity ${c.id === "optimistic" ? "opacity-50" : "opacity-100"}`}
           >
             <p className="text-zinc-700 dark:text-zinc-300 font-medium">{c.text}</p>
           </div>
         ))}
       </div>
-      <div className="flex gap-2 mt-auto">
+      <fetcher.Form method="post" className="flex gap-2 mt-auto">
+        <input type="hidden" name="intent" value="comment" />
         <input
           type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && add()}
+          name="comment"
+          required
           placeholder="Add comment..."
           className="flex-1 px-3 py-2 text-xs font-medium rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 placeholder:text-zinc-400"
           style={{ "--tw-ring-color": "var(--s-accent)" } as any}
         />
         <button
-          type="button"
-          onClick={add}
-          className="px-4 py-2 text-xs rounded-xl font-bold transition-transform hover:scale-105 active:scale-95 shadow-sm text-white"
+          type="submit"
+          disabled={isSubmitting}
+          className="px-4 py-2 text-xs rounded-xl font-bold transition-transform hover:scale-105 active:scale-95 shadow-sm text-white disabled:opacity-70 disabled:pointer-events-none"
           style={{ backgroundColor: "var(--s-accent)" }}
         >
-          Post
+          {isSubmitting ? "..." : "Post"}
         </button>
-      </div>
+      </fetcher.Form>
     </div>
   );
 }
 
 function ShareIsland() {
-  const [shared, setShared] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const shared = searchParams.get("shared") === "true";
+
   return (
     <div
       className="rounded-2xl border bg-white dark:bg-[#050505] p-6 text-center shadow-sm transition-all hover:shadow-md flex flex-col h-40"
@@ -273,11 +320,11 @@ function ShareIsland() {
         className="text-[10px] font-bold uppercase tracking-wider mb-auto"
         style={{ color: "var(--s-accent)" }}
       >
-        🏝️ Share Widget
+        🏝️ URL-Driven Share
       </p>
       <div className="mt-auto">
         {shared ? (
-          <div className="inline-flex items-center justify-center px-6 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30">
+          <div className="inline-flex items-center justify-center px-6 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 animate-in zoom-in duration-300">
             <p className="text-emerald-600 dark:text-emerald-400 font-bold text-sm flex items-center gap-2">
               <span className="text-base">✅</span> Copied!
             </p>
@@ -287,7 +334,13 @@ function ShareIsland() {
             type="button"
             onClick={() => {
               void navigator.clipboard.writeText(window.location.href);
-              setShared(true);
+              setSearchParams(
+                (prev) => {
+                  prev.set("shared", "true");
+                  return prev;
+                },
+                { replace: true, preventScrollReset: true },
+              );
             }}
             className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-white text-xs font-bold transition-transform hover:scale-105 active:scale-95 shadow-sm"
             style={{ backgroundColor: "var(--s-accent)" }}
@@ -301,7 +354,9 @@ function ShareIsland() {
 }
 
 function SearchIsland() {
-  const [query, setQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const query = searchParams.get("q") || "";
+  const submit = useSubmit();
   const items = ["Edge SSR", "Streaming", "ISR", "PPR", "Islands", "Static", "Suspense"];
   const filtered = query ? items.filter((i) => i.toLowerCase().includes(query.toLowerCase())) : [];
   return (
@@ -313,16 +368,21 @@ function SearchIsland() {
         className="text-[10px] font-bold uppercase tracking-wider mb-3 text-center"
         style={{ color: "var(--s-accent)" }}
       >
-        🏝️ Search
+        🏝️ URL Search
       </p>
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search..."
-        className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 focus:outline-none focus:ring-2 focus:bg-white dark:focus:bg-zinc-950 transition-colors mb-2"
-        style={{ "--tw-ring-color": "var(--s-accent)" } as any}
-      />
+      <Form replace preventScrollReset>
+        <input
+          type="text"
+          name="q"
+          defaultValue={query}
+          onChange={(e) =>
+            submit(e.currentTarget.form, { replace: true, preventScrollReset: true })
+          }
+          placeholder="Search..."
+          className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 focus:outline-none focus:ring-2 focus:bg-white dark:focus:bg-zinc-950 transition-colors mb-2"
+          style={{ "--tw-ring-color": "var(--s-accent)" } as any}
+        />
+      </Form>
       <div className="flex-1 overflow-y-auto pr-1">
         {filtered.length > 0 ? (
           <ul className="space-y-1.5">
@@ -345,7 +405,8 @@ function SearchIsland() {
 }
 
 function TabsIsland() {
-  const [tab, setTab] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = parseInt(searchParams.get("tab") || "0", 10) || 0;
   const items = ["Edge SSR", "Streaming", "ISR", "PPR"];
   return (
     <div
@@ -356,14 +417,22 @@ function TabsIsland() {
         className="text-[10px] font-bold uppercase tracking-wider mb-3 text-center"
         style={{ color: "var(--s-accent)" }}
       >
-        🏝️ Tabs
+        🏝️ URL Tabs
       </p>
       <div className="flex flex-wrap gap-1.5 mb-auto justify-center">
         {items.map((item, i) => (
           <button
             key={item}
             type="button"
-            onClick={() => setTab(i)}
+            onClick={() =>
+              setSearchParams(
+                (prev) => {
+                  prev.set("tab", String(i));
+                  return prev;
+                },
+                { replace: true, preventScrollReset: true },
+              )
+            }
             className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${i === tab ? "shadow-sm text-white scale-105" : "bg-zinc-100 dark:bg-zinc-900 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800"}`}
             style={i === tab ? { backgroundColor: "var(--s-accent)" } : {}}
           >
@@ -381,19 +450,23 @@ function TabsIsland() {
   );
 }
 
-const CODE = `// Each island is a self-contained component
+const CODE = `// Each island is a self-contained component using RRv8 features
 function LikeButton() {
-  const [likes, setLikes] = useState(42);
-  return <button onClick={() => setLikes(l => l + 1)}>
-    ❤️ {likes}
-  </button>;
+  const fetcher = useFetcher();
+  const formData = fetcher.formData;
+  const isLiking = formData?.get("action") === "like";
+  const optimisticLikes = isLiking ? likes + 1 : likes;
+
+  return (
+    <fetcher.Form method="post">
+      <input type="hidden" name="action" value="like" />
+      <button type="submit">❤️ {optimisticLikes}</button>
+    </fetcher.Form>
+  );
 }
 
-function Clock() {
-  const [t, setTime] = useState(new Date());
-  useEffect(() => {
-    const id = setInterval(() => setTime(new Date()), 1e3);
-    return () => clearInterval(id);
-  }, []);
-  return <time>{t.toLocaleTimeString()}</time>;
+function Tabs() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") || "0";
+  return <button onClick={() => setSearchParams({ tab: "1" })}>Tab {tab}</button>;
 }`;

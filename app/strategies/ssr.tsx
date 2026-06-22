@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { isRouteErrorResponse, useRouteError, Form } from "react-router";
 import type { Route } from "./+types/ssr";
 import {
   fetchUserProfile,
@@ -6,6 +7,7 @@ import {
   fetchAnalytics,
   fetchServerTimestamp,
 } from "~/lib/data";
+import { getEdgeInfo } from "~/lib/edge-info";
 import { createMetrics } from "~/lib/metrics";
 import { CodeSnippet } from "~/components/code-snippet";
 import { ComparisonPanel } from "~/components/comparison-panel";
@@ -25,7 +27,16 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
   return loaderHeaders;
 }
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+  const url = new URL(request.url);
+  if (url.searchParams.get("crash") === "true") {
+    // Simulate an error at the edge fetching data
+    throw new Response("Simulated Edge Fetch Failure: Database timeout", {
+      status: 500,
+      statusText: "Internal Server Error",
+    });
+  }
+
   const [profile, activities, analytics, timestamp] = await Promise.all([
     fetchUserProfile(400),
     fetchActivityFeed(800),
@@ -39,11 +50,54 @@ export async function loader() {
     timestamp,
     metrics: createMetrics("SSR"),
     serverMessage: env.VALUE_FROM_CLOUDFLARE,
+    edgeInfo: getEdgeInfo(request),
   };
 }
 
+export function ErrorBoundary() {
+  const error = useRouteError();
+
+  return (
+    <StrategyPage
+      strategy="ssr"
+      title="Server-Side Rendering"
+      metrics={createMetrics("SSR")}
+      description="Error Boundaries gracefully catch edge failures without bringing down the whole app."
+    >
+      <div className="p-8 mt-8 rounded-2xl border border-rose-500/30 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 shadow-sm animate-in fade-in zoom-in-95 duration-300">
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+          <span className="text-2xl">🧨</span> Edge SSR Failed
+        </h2>
+        <div className="bg-white dark:bg-black/40 p-4 rounded-xl border border-rose-200 dark:border-rose-900/50 mb-6 font-mono text-sm">
+          {isRouteErrorResponse(error) ? (
+            <p>
+              <span className="font-bold">
+                {error.status} {error.statusText}
+              </span>
+              : {error.data}
+            </p>
+          ) : (
+            <p>Unknown error occurred.</p>
+          )}
+        </div>
+        <p className="text-sm font-medium mb-6 opacity-80">
+          This is caught by React Router v8's <code className="font-bold">ErrorBoundary</code>{" "}
+          export. The main layout (Nav) is still intact!
+        </p>
+        <a
+          href="/ssr"
+          className="inline-flex items-center gap-2 px-6 py-2.5 bg-rose-600 text-white rounded-xl font-bold hover:bg-rose-700 transition-colors shadow-sm"
+        >
+          Recover & Reload
+        </a>
+      </div>
+    </StrategyPage>
+  );
+}
+
 export default function SSR({ loaderData }: Route.ComponentProps) {
-  const { profile, activities, analytics, timestamp, metrics, serverMessage } = loaderData;
+  const { profile, activities, analytics, timestamp, metrics, serverMessage, edgeInfo } =
+    loaderData;
 
   return (
     <StrategyPage
@@ -84,6 +138,30 @@ export default function SSR({ loaderData }: Route.ComponentProps) {
 
       <SectionDivider label="How it works" />
       <CodeSnippet code={SSR_CODE} filename="app/strategies/ssr.tsx" strategy="SSR" />
+
+      <div className="my-6">
+        <Form
+          method="get"
+          className="flex items-center justify-center p-6 rounded-2xl border border-rose-200 dark:border-rose-900/30 bg-rose-50/50 dark:bg-rose-950/10 shadow-sm"
+        >
+          <input type="hidden" name="crash" value="true" />
+          <div className="text-center">
+            <h3 className="font-bold text-rose-900 dark:text-rose-100 mb-2">
+              Test Error Boundaries
+            </h3>
+            <p className="text-xs text-rose-700 dark:text-rose-400 mb-4 max-w-sm mx-auto">
+              Simulate a loader error to see how React Router isolates failures to the specific
+              route component.
+            </p>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-rose-500 text-white font-bold rounded-xl hover:scale-105 active:scale-95 transition-transform text-sm shadow-sm"
+            >
+              Trigger 500 Error
+            </button>
+          </div>
+        </Form>
+      </div>
 
       <div
         className="rounded-2xl border p-5 text-sm my-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
@@ -227,9 +305,15 @@ export default function SSR({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      <p className="text-center text-[11px] font-mono font-medium text-zinc-500 py-4">
-        Edge timestamp: <span style={{ color: "var(--s-text)" }}>{timestamp}</span>
-      </p>
+      <div className="flex flex-col items-center gap-3 py-6">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-white/5 bg-white dark:bg-[#050505] text-[11px] font-mono text-zinc-500 shadow-sm">
+          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          Served from {edgeInfo.colo} ({edgeInfo.city}, {edgeInfo.country})
+        </div>
+        <p className="text-center text-[11px] font-mono font-medium text-zinc-500">
+          Edge timestamp: <span style={{ color: "var(--s-text)" }}>{timestamp}</span>
+        </p>
+      </div>
 
       <SectionDivider label="When to use it" />
       <ComparisonPanel

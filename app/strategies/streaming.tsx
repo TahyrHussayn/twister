@@ -7,6 +7,7 @@ import {
   fetchAnalytics,
   fetchServerTimestamp,
 } from "~/lib/data";
+import { getEdgeInfo } from "~/lib/edge-info";
 import { createMetrics } from "~/lib/metrics";
 import { CodeSnippet } from "~/components/code-snippet";
 import { ComparisonPanel } from "~/components/comparison-panel";
@@ -27,7 +28,7 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
   return loaderHeaders;
 }
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
   return {
     profile: fetchUserProfile(500),
     analytics: fetchAnalytics(1000),
@@ -35,11 +36,13 @@ export async function loader() {
     activities: fetchActivityFeed(2500),
     timestamp: fetchServerTimestamp(),
     metrics: createMetrics("Streaming"),
+    edgeInfo: getEdgeInfo(request),
   };
 }
 
 export default function Streaming({ loaderData }: Route.ComponentProps) {
-  const { profile, analytics, recommendations, activities, timestamp, metrics } = loaderData;
+  const { profile, analytics, recommendations, activities, timestamp, metrics, edgeInfo } =
+    loaderData;
 
   return (
     <StrategyPage
@@ -110,9 +113,15 @@ export default function Streaming({ loaderData }: Route.ComponentProps) {
         </Suspense>
       </div>
 
-      <p className="text-center text-[11px] font-mono font-medium text-zinc-500 py-6">
-        Shell rendered at edge: <span style={{ color: "var(--s-text)" }}>{timestamp}</span>
-      </p>
+      <div className="flex flex-col items-center gap-3 py-6">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-white/5 bg-white dark:bg-[#050505] text-[11px] font-mono text-zinc-500 shadow-sm">
+          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          Served from {edgeInfo.colo} ({edgeInfo.city}, {edgeInfo.country})
+        </div>
+        <p className="text-center text-[11px] font-mono font-medium text-zinc-500">
+          Shell rendered at edge: <span style={{ color: "var(--s-text)" }}>{timestamp}</span>
+        </p>
+      </div>
 
       <SectionDivider label="When to use it" />
       <ComparisonPanel

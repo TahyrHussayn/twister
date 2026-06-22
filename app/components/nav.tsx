@@ -1,4 +1,5 @@
-import { NavLink, useSearchParams } from "react-router";
+import { useState } from "react";
+import { NavLink } from "react-router";
 import { STRATEGY_ACCENTS } from "~/lib/theme";
 
 const LINKS = [
@@ -16,21 +17,10 @@ const LINKS = [
 ] as const;
 
 export function Nav() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const open = searchParams.get("menu") === "open";
+  const [open, setOpen] = useState(false);
 
   const toggleMenu = () => {
-    setSearchParams(
-      (prev) => {
-        if (open) {
-          prev.delete("menu");
-        } else {
-          prev.set("menu", "open");
-        }
-        return prev;
-      },
-      { preventScrollReset: true, replace: true },
-    );
+    setOpen((prev) => !prev);
   };
 
   return (

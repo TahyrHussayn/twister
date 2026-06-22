@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { useSearchParams, Form, useSubmit, useFetcher } from "react-router";
+import { useState, useEffect } from "react";
 import type { Route } from "./+types/islands";
 import { fetchUserProfile, fetchServerTimestamp } from "~/lib/data";
 import { getEdgeInfo } from "~/lib/edge-info";
@@ -308,8 +309,14 @@ function CommentsIsland({ comments }: { comments: { id: string; text: string }[]
 }
 
 function ShareIsland() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const shared = searchParams.get("shared") === "true";
+  const [shared, setShared] = useState(false);
+
+  useEffect(() => {
+    if (shared) {
+      const id = setTimeout(() => setShared(false), 2000);
+      return () => clearTimeout(id);
+    }
+  }, [shared]);
 
   return (
     <div
@@ -334,13 +341,7 @@ function ShareIsland() {
             type="button"
             onClick={() => {
               void navigator.clipboard.writeText(window.location.href);
-              setSearchParams(
-                (prev) => {
-                  prev.set("shared", "true");
-                  return prev;
-                },
-                { replace: true, preventScrollReset: true },
-              );
+              setShared(true);
             }}
             className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-white text-xs font-bold transition-transform hover:scale-105 active:scale-95 shadow-sm"
             style={{ backgroundColor: "var(--s-accent)" }}
@@ -405,8 +406,7 @@ function SearchIsland() {
 }
 
 function TabsIsland() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tab = parseInt(searchParams.get("tab") || "0", 10) || 0;
+  const [tab, setTab] = useState(0);
   const items = ["Edge SSR", "Streaming", "ISR", "PPR"];
   return (
     <div
@@ -424,15 +424,7 @@ function TabsIsland() {
           <button
             key={item}
             type="button"
-            onClick={() =>
-              setSearchParams(
-                (prev) => {
-                  prev.set("tab", String(i));
-                  return prev;
-                },
-                { replace: true, preventScrollReset: true },
-              )
-            }
+            onClick={() => setTab(i)}
             className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${i === tab ? "shadow-sm text-white scale-105" : "bg-zinc-100 dark:bg-zinc-900 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800"}`}
             style={i === tab ? { backgroundColor: "var(--s-accent)" } : {}}
           >
@@ -466,7 +458,6 @@ function LikeButton() {
 }
 
 function Tabs() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tab = searchParams.get("tab") || "0";
-  return <button onClick={() => setSearchParams({ tab: "1" })}>Tab {tab}</button>;
+  const [tab, setTab] = useState(0);
+  return <button onClick={() => setTab(1)}>Tab {tab}</button>;
 }`;

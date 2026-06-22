@@ -19,16 +19,20 @@
     "react-router": "8.0.1"
   },
   "devDependencies": {
+    "@babel/preset-typescript": "^8.0.1",
     "@cloudflare/vite-plugin": "^1.42.0",
     "@react-router/dev": "8.0.1",
     "@tailwindcss/vite": "^4.2.2",
     "@types/node": "^26.0.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
     "@voidzero-dev/vite-plus-linux-x64-gnu": "0.2.1",
+    "babel-plugin-react-compiler": "^1.0.0",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.3",
     "vite": "catalog:",
+    "vite-plugin-babel": "^1.7.3",
     "vite-plus": "catalog:",
     "wrangler": "^4.102.0"
   },

@@ -2,6 +2,7 @@ import { reactRouter } from "@react-router/dev/vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, lazyPlugins } from "vite-plus";
+import babel from "vite-plugin-babel";
 
 export default defineConfig({
   staged: {
@@ -16,6 +17,13 @@ export default defineConfig({
   plugins: lazyPlugins(() => [
     cloudflare({ viteEnvironment: { name: "ssr" } }),
     tailwindcss(),
+    babel({
+      filter: /\.[jt]sx?$/,
+      babelConfig: {
+        presets: ["@babel/preset-typescript"],
+        plugins: [["babel-plugin-react-compiler", {}]],
+      },
+    }),
     reactRouter(),
   ]),
   resolve: {

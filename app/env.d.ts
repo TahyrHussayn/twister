@@ -12,3 +12,7 @@ declare module "react-router" {
     };
   }
 }
+
+/** Injected by Vite at build time — used by SSG to prove data is frozen */
+declare const __BUILD_TIME__: number;
+declare const __BUILD_ID__: string;

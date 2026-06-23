@@ -1,409 +1,720 @@
-import { Link, useFetcher } from "react-router";
+import type { Route } from "./+types/dashboard";
+import { NavLink, useFetcher } from "react-router";
 
-import { createMetrics } from "~/lib/metrics";
-import { STRATEGY_ACCENTS } from "~/lib/theme";
-import { CacheBadge } from "~/components/metrics-badge";
-import { TransparencyLegend } from "~/components/legend";
-import { STRATEGY_METADATA } from "~/lib/strategy-metadata";
-
-export function meta() {
-  return [
-    { title: "Twister — Web Rendering Strategies, Visualized" },
-    {
-      name: "description",
-      content:
-        "Compare SSR, CSR, SSG, Streaming, ISR, PPR, and Islands — all running on Cloudflare Workers at the edge.",
-    },
-  ];
-}
-
-export function headers() {
-  return { "Cache-Control": "public, max-age=30, s-maxage=30" };
-}
-
-export function loader() {
-  return { metrics: createMetrics("Dashboard") };
-}
-
-const STRATEGIES = [
+// ─── Strategy cards ────────────────────────────────────────────────────────────
+const CARDS = [
   {
+    key: "ssr",
     to: "/ssr",
-    name: "Server-Side Rendering",
-    label: "SSR",
-    style: "strat-ssr",
-    desc: "HTML rendered per-request at the edge.",
-    pills: ["Always Fresh", "SEO Native", "No Waterfalls"],
-    delay: "stagger-1",
+    icon: "🖥️",
+    name: "SSR",
+    fullName: "Server-Side Rendering",
+    desc: "Per-request HTML rendered at the edge",
+    color: "#3b82f6",
   },
   {
+    key: "csr",
     to: "/csr",
-    name: "Client-Side Rendering",
-    label: "CSR",
-    style: "strat-csr",
-    desc: "Minimal HTML shell, renders entirely in browser.",
-    pills: ["Fast Navigation", "Low Server Cost"],
-    delay: "stagger-2",
+    icon: "🌐",
+    name: "CSR",
+    fullName: "Client-Side Rendering",
+    desc: "Shell served instantly, browser renders",
+    color: "#8b5cf6",
   },
   {
+    key: "ssg",
     to: "/ssg",
-    name: "Static Generation",
-    label: "SSG",
-    style: "strat-ssg",
-    desc: "Pre-rendered at build time. Instant edge delivery.",
-    pills: ["Instant TTFB", "Perfect SEO", "Zero Compute"],
-    delay: "stagger-3",
+    icon: "⚡",
+    name: "SSG",
+    fullName: "Static Site Generation",
+    desc: "HTML baked at build, cached forever",
+    color: "#10b981",
   },
   {
+    key: "streaming",
     to: "/streaming",
-    name: "Streaming SSR",
-    label: "Streaming",
-    style: "strat-streaming",
-    desc: "HTML streams chunk by chunk as data resolves.",
-    pills: ["No Waterfalls", "Best Perceived Load"],
-    delay: "stagger-4",
+    icon: "🌊",
+    name: "Streaming",
+    fullName: "Streaming SSR",
+    desc: "Progressive rendering with Suspense",
+    color: "#06b6d4",
   },
   {
+    key: "isr",
     to: "/isr",
-    name: "Incremental Static Regeneration",
-    label: "ISR",
-    style: "strat-isr",
-    desc: "Global edge cache with background revalidation.",
-    pills: ["Fast Cache HIT", "Auto-Regen"],
-    delay: "stagger-5",
+    icon: "🔄",
+    name: "ISR",
+    fullName: "Incremental Static Regen",
+    desc: "Cached response, revalidated on schedule",
+    color: "#f59e0b",
   },
   {
+    key: "ppr",
     to: "/ppr",
-    name: "Partial Prerendering",
-    label: "PPR",
-    style: "strat-ppr",
-    desc: "Static shell delivered instantly + dynamic holes.",
-    pills: ["Instant Shell", "Dynamic Content"],
-    delay: "stagger-6",
+    icon: "🧩",
+    name: "Stream+Cache",
+    fullName: "Streaming + Edge Cache",
+    desc: "Instant shell, dynamic holes streamed",
+    color: "#f43f5e",
   },
   {
+    key: "islands",
     to: "/islands",
-    name: "React Islands",
-    label: "Islands",
-    style: "strat-islands",
-    desc: "Static HTML with isolated interactive components.",
-    pills: ["Minimal JS", "Progressive Hydration"],
-    delay: "stagger-7",
+    icon: "🏝️",
+    name: "Islands",
+    fullName: "React Islands",
+    desc: "Isolated hydration per component",
+    color: "#14b8a6",
   },
   {
+    key: "htmx",
     to: "/htmx",
-    name: "HTMX Playground",
-    label: "HTMX",
-    style: "strat-htmx",
-    desc: "Hypermedia driven UI using server-rendered HTML fragments.",
-    pills: ["Client-Side Swaps", "Zero JS Framework", "Lightweight"],
-    delay: "stagger-8",
+    icon: "⚡",
+    name: "HTMX",
+    fullName: "HTMX Hypermedia",
+    desc: "HTML fragments, no client JS framework",
+    color: "#6366f1",
   },
   {
+    key: "hybrid",
     to: "/hybrid",
-    name: "Hybrid Rendering",
-    label: "HYBRID",
-    style: "strat-hybrid",
-    desc: "Mix SSG and SSR per-route, or fetch CSR data into an SSG shell.",
-    pills: ["Per-Route Strategy", "Static + Dynamic"],
-    delay: "stagger-9",
+    icon: "🧬",
+    name: "Hybrid",
+    fullName: "Hybrid Rendering",
+    desc: "Static shell + client dynamic layer",
+    color: "#a855f7",
   },
   {
+    key: "edge-vs-origin",
     to: "/edge-vs-origin",
+    icon: "⏱️",
     name: "Edge vs Origin",
-    label: "EDGE-VS-ORIGIN",
-    style: "strat-edge-vs-origin",
-    desc: "Compare latency between Edge SSR and centralized Origin SSR.",
-    pills: ["Latency Benchmark", "Architecture"],
-    delay: "stagger-10",
+    fullName: "Edge vs Origin",
+    desc: "Latency comparison benchmark",
+    color: "#ef4444",
   },
 ];
 
-type BenchResult = {
-  strategy: string;
-  url: string;
-  ttfb: number;
-  status: number;
-  cacheStatus?: string | null;
-  error?: string;
-};
+// ─── Types ──────────────────────────────────────────────────────────────────────
+type BenchResult = { strategy: string; ttfb: number; cached: boolean; cacheStatus: string };
 
-type BenchmarkData = {
-  error?: string;
-  results?: BenchResult[];
-  timestamp?: string;
-};
+// ─── Loader ─────────────────────────────────────────────────────────────────────
+export async function loader({ request: _request, context }: Route.LoaderArgs) {
+  const cf = (context as any)?.cloudflare?.cf as CfProperties | undefined;
+  return {
+    colo: cf?.colo ?? "UNKNOWN",
+    country: cf?.country ?? "Unknown",
+  };
+}
 
-export default function Dashboard() {
-  const fetcher = useFetcher<BenchmarkData>();
+// ─── Component ──────────────────────────────────────────────────────────────────
+export default function Dashboard({ loaderData }: Route.ComponentProps) {
+  const { colo, country } = loaderData as { colo: string; country: string };
+  const fetcher = useFetcher<{ results: BenchResult[] }>();
+
   const isRunning = fetcher.state !== "idle";
-  const error = fetcher.data?.error;
-  const results = fetcher.data?.results;
+  const results: BenchResult[] = fetcher.data?.results ?? [];
+  const sorted = [...results].sort((a, b) => a.ttfb - b.ttfb);
+  const maxTtfb = sorted.length > 0 ? sorted[sorted.length - 1].ttfb : 1;
 
-  const runBenchmark = () => {
-    void fetcher.submit(null, { method: "POST", action: "/api/benchmark" });
+  const handleBenchmark = () => {
+    void fetcher.submit({}, { method: "post", action: "/api/benchmark" });
   };
 
-  const sortedResults = results
-    ? [...results].sort((a, b) => (a.ttfb === -1 ? 9999 : a.ttfb) - (b.ttfb === -1 ? 9999 : b.ttfb))
-    : [];
-
-  const maxTtfb = results
-    ? Math.max(...results.map((r: BenchResult) => (r.ttfb > 0 ? r.ttfb : 0)))
-    : 100;
-
   return (
-    <div className="space-y-16 pb-16 pt-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Sleek Hero Section */}
-      <header className="text-center max-w-4xl mx-auto px-4">
-        <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tighter mb-4">
-          <span
-            className="text-transparent bg-clip-text"
+    <div
+      style={{
+        background: "#0c0d1a",
+        minHeight: "100vh",
+        color: "#e2e8f0",
+        fontFamily: "Inter, sans-serif",
+      }}
+    >
+      {/* ── Hero ─────────────────────────────────────────────────────────────── */}
+      <section
+        style={{
+          textAlign: "center",
+          padding: "80px 24px 60px",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {/* Radial glow background */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 0,
+            background:
+              "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(99,102,241,0.18) 0%, transparent 70%)",
+            pointerEvents: "none",
+          }}
+        />
+
+        {/* Floating grid lines */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 0,
+            opacity: 0.04,
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
+            pointerEvents: "none",
+          }}
+        />
+
+        <div style={{ position: "relative", zIndex: 1, maxWidth: 760, margin: "0 auto" }}>
+          <div
+            className="eyebrow animate-in"
+            style={{ marginBottom: 16, color: "#a78bfa", letterSpacing: "0.2em" }}
+          >
+            Mission Control
+          </div>
+
+          <h1
+            className="display animate-in"
             style={{
-              backgroundImage:
-                "linear-gradient(to right, #3b82f6, #c084fc, #f43f5e, #f59e0b, #10b981, #06b6d4)",
-              backgroundSize: "200% auto",
-              animation: "shimmer 4s linear infinite",
+              fontSize: "clamp(48px, 8vw, 96px)",
+              fontWeight: 900,
+              background: "linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #06b6d4 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              lineHeight: 1.05,
+              marginBottom: 20,
             }}
           >
             Twister
-          </span>
-        </h1>
-        <p className="text-lg sm:text-xl md:text-2xl text-zinc-500 dark:text-zinc-400 font-medium tracking-tight">
-          Web Rendering Strategies, Visualized.
-        </p>
-      </header>
+          </h1>
 
-      {/* Live Benchmark Section */}
-      <div className="max-w-4xl mx-auto rounded-3xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-[#050505]/50 backdrop-blur-xl p-8 sm:p-10 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500 opacity-20" />
-
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-              Live Edge Benchmark
-            </h2>
-            <p className="text-sm text-zinc-500 mt-1">
-              Measures real TTFB from Cloudflare Edge to your browser.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={runBenchmark}
-            disabled={isRunning}
-            className="group relative px-6 py-2.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold text-sm hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none shadow-[0_0_20px_rgba(255,255,255,0.1)] dark:shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+          <p
+            className="animate-in-up"
+            style={{
+              fontSize: 18,
+              color: "#94a3b8",
+              maxWidth: 560,
+              margin: "0 auto 32px",
+              lineHeight: 1.7,
+            }}
           >
-            {isRunning ? "Running..." : "Run Benchmark"}
-          </button>
-        </div>
+            A live observatory of web rendering strategies on{" "}
+            <strong style={{ color: "#e2e8f0" }}>Cloudflare Workers</strong>. Explore SSR, CSR, SSG,
+            Streaming, ISR and beyond — all running at the edge.
+          </p>
 
-        {error && (
-          <div className="rounded-xl border border-rose-500/30 bg-rose-50 dark:bg-rose-950/30 p-4 mb-6 text-sm text-rose-600 dark:text-rose-400 font-medium">
-            Error: {error}
-          </div>
-        )}
-
-        {!results && !error && !isRunning && (
-          <div className="rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-800 p-12 text-center text-zinc-500 dark:text-zinc-400 bg-zinc-50/50 dark:bg-zinc-900/20">
-            <svg
-              className="w-8 h-8 mx-auto mb-3 opacity-50"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              />
-            </svg>
-            <p className="font-medium text-sm">
-              Hit "Run Benchmark" to measure current performance.
-            </p>
-            <p className="text-xs mt-2 opacity-80">
-              Tip: Run twice to see ISR cache warm up from MISS to HIT.
-            </p>
-          </div>
-        )}
-
-        {isRunning && (
-          <div className="space-y-4 py-4">
-            {STRATEGIES.map((_, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <div
-                  className="w-24 h-4 rounded-md shimmer bg-zinc-200 dark:bg-zinc-800"
-                  style={{ animationDelay: `${i * 0.1}s` }}
-                />
-                <div
-                  className="flex-1 h-2 rounded-full shimmer bg-zinc-200 dark:bg-zinc-800"
-                  style={{ animationDelay: `${i * 0.1 + 0.1}s` }}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {results && !isRunning && (
-          <div className="space-y-5 animate-in fade-in duration-500">
-            {sortedResults.map((r, i) => {
-              const accent = STRATEGY_ACCENTS[r.strategy] || STRATEGY_ACCENTS.SSR;
-              const isError = r.error || r.ttfb === -1;
-              const widthPct = isError ? 0 : Math.max(2, (r.ttfb / maxTtfb) * 100);
-
-              const ttfbColor = isError
-                ? "text-rose-500"
-                : r.ttfb < 100
-                  ? "text-emerald-500 dark:text-emerald-400"
-                  : r.ttfb < 300
-                    ? "text-amber-500 dark:text-amber-400"
-                    : "text-rose-500 dark:text-rose-400";
-
-              return (
-                <div key={r.strategy} className="flex items-center gap-4 group">
-                  <div className="w-28 sm:w-32 flex shrink-0 items-center gap-2">
-                    <span className="text-lg">{accent.icon}</span>
-                    <Link
-                      to={r.url}
-                      className="font-semibold text-xs sm:text-sm hover:underline"
-                      style={{ color: accent.hex }}
-                    >
-                      {r.strategy}
-                    </Link>
-                  </div>
-
-                  <div className="flex-1 flex items-center h-8 relative">
-                    {/* Background track */}
-                    <div className="absolute inset-y-1.5 left-0 right-0 rounded-r-full bg-zinc-100 dark:bg-zinc-900/50" />
-
-                    {/* Animated Bar */}
-                    <div
-                      className="relative h-5 rounded-r-full flex items-center shadow-sm transition-all duration-1000 ease-out"
-                      style={{
-                        width: `${widthPct}%`,
-                        backgroundColor: accent.hex,
-                        boxShadow: `0 0 10px ${accent.hex}40`,
-                        animation: `slide-right 1s ease-out ${i * 0.1}s both`,
-                      }}
-                    />
-                  </div>
-
-                  <div className="w-20 shrink-0 text-right flex flex-col items-end gap-1">
-                    <span className={`font-mono font-bold text-sm ${ttfbColor}`}>
-                      {isError ? "ERR" : `${r.ttfb}ms`}
-                    </span>
-                    {r.cacheStatus && (
-                      <div className="scale-75 origin-right -mt-1">
-                        <CacheBadge status={r.cacheStatus as any} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Strategy Cards Grid */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto px-4 group/cards">
-        {STRATEGIES.map((s) => {
-          const accent = STRATEGY_ACCENTS[s.label] || STRATEGY_ACCENTS.SSR;
-          return (
-            <Link
-              key={s.to}
-              to={s.to}
-              viewTransition
-              prefetch="intent"
-              className={`relative flex flex-col rounded-3xl border bg-white/80 dark:bg-[#050505]/80 backdrop-blur-md p-6 shadow-sm transition-all hover:shadow-2xl overflow-hidden group/card animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both ${s.delay} ${s.style} strat-header-glow card-tilt`}
+          {/* Colo badge */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+            <span
               style={{
-                borderColor: `var(--s-border, ${accent.hex}30)`,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 18px",
+                border: "1px solid rgba(99,102,241,0.4)",
+                borderRadius: 9999,
+                background: "rgba(99,102,241,0.1)",
+                fontSize: 13,
+                fontFamily: "ui-monospace, monospace",
+                color: "#a78bfa",
               }}
             >
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl filter drop-shadow-md">{accent.icon}</span>
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "#6366f1",
+                  boxShadow: "0 0 8px #6366f1",
+                  display: "inline-block",
+                }}
+              />
+              Edge: <strong>{colo}</strong> · {country}
+            </span>
+
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 18px",
+                border: "1px solid rgba(255,255,255,0.07)",
+                borderRadius: 9999,
+                background: "rgba(255,255,255,0.03)",
+                fontSize: 13,
+                color: "#64748b",
+              }}
+            >
+              React Router v8 · Cloudflare Workers · Vite+
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Strategy Grid ─────────────────────────────────────────────────────── */}
+      <section style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px 80px" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 32,
+          }}
+        >
+          <div>
+            <div className="eyebrow" style={{ color: "#64748b", marginBottom: 6 }}>
+              Rendering Strategies
+            </div>
+            <h2 style={{ fontSize: 28, fontWeight: 700, margin: 0, color: "var(--color-fg)" }}>
+              Pick a strategy to explore
+            </h2>
+          </div>
+          <span
+            style={{
+              fontSize: 13,
+              color: "#475569",
+              padding: "6px 14px",
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: 8,
+            }}
+          >
+            {CARDS.length} strategies
+          </span>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+            gap: 16,
+          }}
+        >
+          {CARDS.map((card, i) => (
+            <NavLink
+              key={card.key}
+              to={card.to}
+              className={`strategy-nav-card strat-${card.key}`}
+              style={{
+                display: "block",
+                textDecoration: "none",
+                borderRadius: 14,
+                border: "1px solid rgba(255,255,255,0.07)",
+                background: "rgba(255,255,255,0.03)",
+                padding: "20px 20px 20px 0",
+                position: "relative",
+                overflow: "hidden",
+                transition: "transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease",
+                animationDelay: `${i * 40}ms`,
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-3px)";
+                (e.currentTarget as HTMLAnchorElement).style.boxShadow =
+                  `0 12px 40px ${card.color}22`;
+                (e.currentTarget as HTMLAnchorElement).style.borderColor = `${card.color}55`;
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+                (e.currentTarget as HTMLAnchorElement).style.boxShadow = "none";
+                (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.07)";
+              }}
+            >
+              {/* Left accent border */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 4,
+                  background: card.color,
+                  borderRadius: "14px 0 0 14px",
+                }}
+              />
+
+              <div style={{ paddingLeft: 20 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    marginBottom: 10,
+                  }}
+                >
                   <div>
-                    <h3
-                      className="font-extrabold text-lg tracking-tight transition-colors"
-                      style={{ color: "var(--s-text, #111)" }}
-                    >
-                      {s.name}
-                    </h3>
-                    <span
-                      className="text-[10px] font-mono font-bold tracking-widest uppercase opacity-70"
-                      style={{ color: "var(--s-accent)" }}
-                    >
-                      {s.label}
-                    </span>
+                    <span style={{ fontSize: 26 }}>{card.icon}</span>
                   </div>
-                </div>
-                {(() => {
-                  const meta = (STRATEGY_METADATA as any)[s.to.replace("/", "")];
-                  if (!meta) return null;
-                  return (
-                    <div
-                      className={`shrink-0 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                        meta.isReal
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                          : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                      }`}
-                    >
-                      {meta.isReal ? "Native" : "Demo"}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6 leading-relaxed flex-1 font-medium">
-                {s.desc}
-              </p>
-
-              <div className="flex flex-wrap gap-2 mb-6">
-                {s.pills.map((p) => (
                   <span
-                    key={p}
-                    className="px-2.5 py-1 text-[10px] font-bold tracking-wide rounded-full border"
                     style={{
-                      backgroundColor: `var(--s-bg, ${accent.hex}10)`,
-                      color: `var(--s-text, ${accent.hex})`,
-                      borderColor: `var(--s-border, ${accent.hex}30)`,
+                      fontSize: 11,
+                      padding: "3px 10px",
+                      borderRadius: 9999,
+                      background: `${card.color}22`,
+                      color: card.color,
+                      fontWeight: 700,
+                      fontFamily: "ui-monospace, monospace",
+                      letterSpacing: "0.08em",
                     }}
                   >
-                    {p}
+                    {card.name}
                   </span>
-                ))}
-              </div>
+                </div>
 
-              <div
-                className="mt-auto pt-4 border-t flex items-center justify-between font-bold text-xs"
-                style={{ borderColor: `var(--s-border, ${accent.hex}20)` }}
-              >
-                <span style={{ color: "var(--s-accent)" }}>Explore Strategy</span>
-                <span
-                  className="w-6 h-6 rounded-full flex items-center justify-center transition-transform group-hover/card:translate-x-1"
-                  style={{ backgroundColor: `var(--s-bg)`, color: "var(--s-accent)" }}
+                <p
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: "var(--color-fg)",
+                    margin: "0 0 4px",
+                  }}
                 >
-                  →
-                </span>
+                  {card.fullName}
+                </p>
+                <p style={{ fontSize: 13, color: "#64748b", margin: 0, lineHeight: 1.5 }}>
+                  {card.desc}
+                </p>
+
+                <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 12, color: card.color, fontWeight: 600 }}>
+                    Explore →
+                  </span>
+                </div>
               </div>
-            </Link>
-          );
-        })}
-      </div>
+            </NavLink>
+          ))}
+        </div>
+      </section>
 
-      <div className="max-w-6xl mx-auto px-4 mt-8">
-        <TransparencyLegend />
-      </div>
+      {/* ── Benchmark Section ─────────────────────────────────────────────────── */}
+      <section style={{ maxWidth: 900, margin: "0 auto", padding: "0 24px 80px" }}>
+        <div
+          style={{
+            background: "rgba(255,255,255,0.02)",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: 20,
+            padding: "40px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              marginBottom: 8,
+              flexWrap: "wrap",
+              gap: 16,
+            }}
+          >
+            <div>
+              <div className="eyebrow" style={{ color: "#64748b", marginBottom: 6 }}>
+                Live Performance
+              </div>
+              <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: "var(--color-fg)" }}>
+                Live Client Benchmark
+              </h2>
+              <p style={{ fontSize: 13, color: "#64748b", marginTop: 8, maxWidth: 480 }}>
+                Measures server-to-server TTFB from this Cloudflare Worker to each strategy route.
+                Results reflect real edge latency, cache status, and response times.
+              </p>
+            </div>
 
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-        @keyframes slide-right {
-          from { width: 0%; opacity: 0; }
-        }
-      `,
+            <button
+              onClick={handleBenchmark}
+              disabled={isRunning}
+              style={{
+                padding: "12px 28px",
+                borderRadius: 10,
+                border: "none",
+                background: isRunning
+                  ? "rgba(99,102,241,0.3)"
+                  : "linear-gradient(135deg, #6366f1, #a855f7)",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: isRunning ? "not-allowed" : "pointer",
+                transition: "opacity 0.2s",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+            >
+              {isRunning ? (
+                <>
+                  <SpinnerDots />
+                  Running…
+                </>
+              ) : (
+                <>⚡ Run Benchmark</>
+              )}
+            </button>
+          </div>
+
+          {/* Results */}
+          {results.length === 0 && !isRunning && (
+            <div
+              style={{
+                marginTop: 32,
+                padding: "40px 24px",
+                textAlign: "center",
+                border: "2px dashed rgba(255,255,255,0.06)",
+                borderRadius: 12,
+                color: "#475569",
+              }}
+            >
+              <div style={{ fontSize: 36, marginBottom: 12 }}>📡</div>
+              <p style={{ margin: 0, fontSize: 14 }}>
+                Click "Run Benchmark" to measure TTFB across all strategy routes
+              </p>
+            </div>
+          )}
+
+          {isRunning && (
+            <div style={{ marginTop: 32 }}>
+              {CARDS.slice(0, 6).map((c, i) => (
+                <div key={c.key} style={{ marginBottom: 14 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: 5,
+                      fontSize: 13,
+                      color: "#64748b",
+                    }}
+                  >
+                    <span>
+                      {c.icon} {c.name}
+                    </span>
+                    <span style={{ fontFamily: "monospace" }}>…ms</span>
+                  </div>
+                  <div className="bench-bar">
+                    <div
+                      className="bench-fill skeleton"
+                      style={{ width: `${20 + i * 12}%`, background: "rgba(255,255,255,0.08)" }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {sorted.length > 0 && !isRunning && (
+            <div style={{ marginTop: 32 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: 16,
+                  fontSize: 12,
+                  color: "#475569",
+                }}
+              >
+                <span>Strategy</span>
+                <span>TTFB (ms) · Cache Status</span>
+              </div>
+
+              {sorted.map((r, i) => {
+                const card = CARDS.find(
+                  (c) => c.key === r.strategy.toLowerCase().replace(/[\s+]+/g, "-"),
+                );
+                const color = card?.color ?? "#6366f1";
+                const pct = Math.max(4, (r.ttfb / maxTtfb) * 100);
+                return (
+                  <div key={r.strategy} style={{ marginBottom: 16 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginBottom: 6,
+                        alignItems: "center",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: "50%",
+                            background: color,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 10,
+                            fontWeight: 800,
+                            color: "#000",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {i + 1}
+                        </span>
+                        <span style={{ fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
+                          {r.strategy}
+                        </span>
+                        {i === 0 && (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              padding: "2px 8px",
+                              borderRadius: 9999,
+                              background: "rgba(16,185,129,0.2)",
+                              color: "#10b981",
+                              fontWeight: 700,
+                            }}
+                          >
+                            FASTEST
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span
+                          style={{
+                            fontFamily: "ui-monospace, monospace",
+                            fontSize: 13,
+                            color: "var(--color-fg)",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {r.ttfb}ms
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 10,
+                            padding: "2px 8px",
+                            borderRadius: 9999,
+                            background: r.cached
+                              ? "rgba(16,185,129,0.15)"
+                              : "rgba(245,158,11,0.15)",
+                            color: r.cached ? "#10b981" : "#f59e0b",
+                            fontWeight: 700,
+                            fontFamily: "monospace",
+                          }}
+                        >
+                          {r.cacheStatus}
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      className="bench-bar"
+                      style={{
+                        background: "rgba(255,255,255,0.05)",
+                        borderRadius: 6,
+                        overflow: "hidden",
+                        height: 8,
+                      }}
+                    >
+                      <div
+                        className="bench-fill"
+                        style={{
+                          width: `${pct}%`,
+                          background: `linear-gradient(90deg, ${color}cc, ${color})`,
+                          height: "100%",
+                          borderRadius: 6,
+                          transition: "width 0.6s ease",
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── Compare CTA ───────────────────────────────────────────────────────── */}
+      <section
+        style={{ maxWidth: 700, margin: "0 auto", padding: "0 24px 60px", textAlign: "center" }}
+      >
+        <div
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(168,85,247,0.12) 100%)",
+            border: "1px solid rgba(99,102,241,0.3)",
+            borderRadius: 20,
+            padding: "48px 40px",
+          }}
+        >
+          <div style={{ fontSize: 40, marginBottom: 16 }}>🔬</div>
+          <h2 style={{ fontSize: 26, fontWeight: 800, marginBottom: 12, color: "var(--color-fg)" }}>
+            Compare Strategies Side-by-Side
+          </h2>
+          <p style={{ fontSize: 15, color: "#64748b", marginBottom: 28, lineHeight: 1.7 }}>
+            Deep-dive into the trade-offs: TTFB, freshness, compute cost, caching behaviour, and
+            when to pick each strategy for your use case.
+          </p>
+          <NavLink
+            to="/compare"
+            style={{
+              display: "inline-block",
+              padding: "14px 36px",
+              borderRadius: 10,
+              background: "linear-gradient(135deg, #6366f1, #a855f7)",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 15,
+              textDecoration: "none",
+              transition: "opacity 0.2s, transform 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.opacity = "0.9";
+              (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
+              (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+            }}
+          >
+            Open Comparison Table →
+          </NavLink>
+        </div>
+      </section>
+
+      {/* ── Footer ────────────────────────────────────────────────────────────── */}
+      <footer
+        style={{
+          borderTop: "1px solid rgba(255,255,255,0.07)",
+          padding: "28px 24px",
+          textAlign: "center",
+          fontSize: 13,
+          color: "#334155",
         }}
-      />
+      >
+        <span>React Router v8</span>
+        <span style={{ margin: "0 10px", opacity: 0.4 }}>·</span>
+        <span>Cloudflare Workers</span>
+        <span style={{ margin: "0 10px", opacity: 0.4 }}>·</span>
+        <span>Tailwind CSS v4</span>
+        <span style={{ margin: "0 10px", opacity: 0.4 }}>·</span>
+        <span>Vite+</span>
+      </footer>
     </div>
+  );
+}
+
+// ─── Spinner dots ────────────────────────────────────────────────────────────
+function SpinnerDots() {
+  return (
+    <span style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          style={{
+            width: 5,
+            height: 5,
+            borderRadius: "50%",
+            background: "#fff",
+            opacity: 0.7,
+            animation: `bounce 0.9s ${i * 0.15}s infinite ease-in-out`,
+          }}
+        />
+      ))}
+      <style>{`
+        @keyframes bounce {
+          0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+          40% { transform: scale(1); opacity: 1; }
+        }
+      `}</style>
+    </span>
   );
 }

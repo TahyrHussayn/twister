@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { NavLink } from "react-router";
+import { NavLink, useSearchParams, useRevalidator } from "react-router";
 import { STRATEGY_ACCENTS } from "~/lib/theme";
 
 const LINKS = [
@@ -16,11 +15,30 @@ const LINKS = [
   { to: "/edge-vs-origin", label: "Edge vs Origin", key: "EDGE-VS-ORIGIN" },
 ] as const;
 
-export function Nav() {
-  const [open, setOpen] = useState(false);
+export function Nav({ theme, latency }: { theme: string; latency: number }) {
+  const [params, setParams] = useSearchParams();
+  const revalidator = useRevalidator();
+  const open = params.get("menu") === "1";
+
+  const changeLatency = (val: number) => {
+    document.cookie = `twister_latency=${val}; path=/; max-age=31536000`;
+    void revalidator.revalidate();
+  };
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    document.cookie = `twister_theme=${nextTheme}; path=/; max-age=31536000`;
+    void revalidator.revalidate();
+  };
 
   const toggleMenu = () => {
-    setOpen((prev) => !prev);
+    const next = new URLSearchParams(params);
+    if (open) {
+      next.delete("menu");
+    } else {
+      next.set("menu", "1");
+    }
+    setParams(next, { replace: true, preventScrollReset: true });
   };
 
   return (
@@ -63,6 +81,32 @@ export function Nav() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            type="button"
+            className="p-1.5 rounded-lg border border-white/10 hover:border-white/20 transition-colors text-xs font-mono text-[var(--color-fg-dim)] bg-[#0c0d1a]"
+            title="Toggle theme (server-rendered cookie-based)"
+          >
+            {theme === "dark" ? "🌙 Dark" : "☀️ Light"}
+          </button>
+
+          {/* Latency Selector */}
+          <select
+            id="latency-select"
+            value={latency}
+            onChange={(e) => changeLatency(parseInt(e.target.value, 10))}
+            title="Simulated Origin Latency"
+            className="bg-[#0c0d1a] border border-white/10 rounded px-2 py-1 text-xs font-mono text-[var(--color-fg-dim)] outline-none focus:border-indigo-500 hover:border-white/20 transition-colors"
+            style={{ cursor: "pointer" }}
+          >
+            <option value="0">⚡ 0ms</option>
+            <option value="200">🐢 200ms</option>
+            <option value="500">🐢 500ms</option>
+            <option value="1000">🐢 1.0s</option>
+            <option value="2000">🐌 2.0s</option>
+          </select>
+
           <button
             type="button"
             onClick={toggleMenu}

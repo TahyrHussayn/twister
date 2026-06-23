@@ -1,3 +1,10 @@
+/**
+ * edge-info.ts — Extract Cloudflare request metadata.
+ *
+ * Returns a stable object from request.cf properties.
+ * Falls back gracefully in non-CF environments (local dev, Vitest).
+ */
+
 export type EdgeInfo = {
   colo: string;
   country: string;
@@ -6,17 +13,15 @@ export type EdgeInfo = {
   timezone: string;
 };
 
-/**
- * Extracts Cloudflare edge datacenter info from request.cf.
- * Returns safe fallbacks in dev mode where request.cf is unavailable.
- */
 export function getEdgeInfo(request: Request): EdgeInfo {
-  const cf = (request as Request & { cf?: Record<string, unknown> }).cf;
+  // Cloudflare Workers inject cf metadata on every request
+  const cf = (request as Request & { cf?: CfProperties }).cf;
+
   return {
-    colo: (cf?.colo as string) ?? "DEV",
-    country: (cf?.country as string) ?? "XX",
-    city: (cf?.city as string) ?? "localhost",
-    region: (cf?.region as string) ?? "unknown",
-    timezone: (cf?.timezone as string) ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+    colo: (cf?.colo as string | undefined) ?? "LOCAL",
+    country: (cf?.country as string | undefined) ?? "Local Dev",
+    city: (cf?.city as string | undefined) ?? "Localhost",
+    region: (cf?.region as string | undefined) ?? "Dev Region",
+    timezone: (cf?.timezone as string | undefined) ?? "UTC",
   };
 }

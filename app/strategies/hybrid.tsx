@@ -1,234 +1,301 @@
 import type { Route } from "./+types/hybrid";
-import { useFetcher } from "react-router";
-import { fetchProductList, type Product } from "~/lib/data";
+import { makeProducts } from "~/lib/seed";
 import { createMetrics } from "~/lib/metrics";
 import { StrategyPage, SectionDivider } from "~/components/strategy-page";
 import { CodeSnippet } from "~/components/code-snippet";
 import { ComparisonPanel } from "~/components/comparison-panel";
+import { FlowDiagram } from "~/components/flow-diagram";
+import { CardSkeleton } from "~/components/skeleton";
+import { useFetcher } from "react-router";
+import type { Product } from "~/lib/seed";
 
-export function meta() {
-  return [
-    { title: "Hybrid — Per-Route & Mixed Rendering" },
-    {
-      name: "description",
-      content:
-        "Hybrid rendering demo: Mixing static generation (SSG) for the shell with client-side fetching (CSR) for dynamic data using clientLoader.",
-    },
-  ];
+declare const __BUILD_TIME__: number;
+declare const __BUILD_ID__: string;
+
+// ─── ProductItem ────────────────────────────────────────────────────────────
+// Extracted as its own component so useFetcher is NOT called inside .map()
+function ProductItem({ product, isFavorite }: { product: Product; isFavorite: boolean }) {
+  const fetcher = useFetcher();
+  const isAdd = fetcher.formData?.get("action") === "add";
+  const isRemove = fetcher.formData?.get("action") === "remove";
+  const isFav = isAdd ? true : isRemove ? false : isFavorite;
+
+  return (
+    <li className="data-card p-4 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <fetcher.Form method="post">
+          <input type="hidden" name="id" value={product.id} />
+          <input type="hidden" name="action" value={isFav ? "remove" : "add"} />
+          <button
+            type="submit"
+            className="text-xl hover:scale-110 active:scale-90 transition-transform"
+            aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
+          >
+            {isFav ? "⭐" : "☆"}
+          </button>
+        </fetcher.Form>
+        <div>
+          <p className="text-sm font-semibold text-[var(--color-fg)]">{product.name}</p>
+          <p className="text-xs text-[var(--color-subtle)]">{product.category}</p>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className="font-mono font-bold text-sm" style={{ color: "var(--s-accent)" }}>
+          ${product.price.toFixed(2)}
+        </p>
+        <span className={`text-xs ${product.inStock ? "text-green-400" : "text-red-400"}`}>
+          {product.inStock ? "✓ In stock" : "✗ Out of stock"}
+        </span>
+      </div>
+    </li>
+  );
 }
 
-export function headers({ loaderHeaders }: Route.HeadersArgs) {
-  return loaderHeaders;
-}
-
+// ─── Loader (server, bakes at build time) ───────────────────────────────────
 export async function loader() {
+  const buildTime = typeof __BUILD_TIME__ !== "undefined" ? __BUILD_TIME__ : Date.now();
+  const buildId = typeof __BUILD_ID__ !== "undefined" ? __BUILD_ID__ : "DEV000";
+  return { metrics: createMetrics("HYBRID"), buildTime, buildId };
+}
+
+export function headers() {
   return {
-    metrics: createMetrics("HYBRID"),
+    "Cache-Control": "public, max-age=31536000",
+    "X-Render-Strategy": "Hybrid",
   };
 }
 
+// ─── clientLoader (runs in browser after hydration) ─────────────────────────
 export async function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
   const serverData = await serverLoader();
-  const products = await fetchProductList();
-  const favorites =
-    typeof window !== "undefined"
-      ? JSON.parse(localStorage.getItem("twister_favorites") || "[]")
-      : [];
+  const seed = Math.floor(Date.now() / 10_000);
+  const favorites: string[] = JSON.parse(localStorage.getItem("twister_hybrid_favs") ?? "[]");
   return {
     ...serverData,
-    products,
+    products: makeProducts(seed, 6),
     favorites,
+    clientTime: new Date().toISOString(),
+    hydrationMs: Math.round(performance.now()),
   };
 }
 clientLoader.hydrate = true;
 
+// ─── clientAction ────────────────────────────────────────────────────────────
 export async function clientAction({ request }: Route.ClientActionArgs) {
-  const formData = await request.formData();
-  const id = formData.get("id") as string;
-  const isFavorite = formData.get("isFavorite") === "true";
-
-  const favorites = JSON.parse(localStorage.getItem("twister_favorites") || "[]");
-  if (isFavorite) {
-    if (!favorites.includes(id)) favorites.push(id);
-  } else {
-    const index = favorites.indexOf(id);
-    if (index > -1) favorites.splice(index, 1);
-  }
-  localStorage.setItem("twister_favorites", JSON.stringify(favorites));
-  return { success: true };
+  const form = await request.formData();
+  const id = form.get("id") as string;
+  const action = form.get("action") as string;
+  const current: string[] = JSON.parse(localStorage.getItem("twister_hybrid_favs") ?? "[]");
+  const updated =
+    action === "add" ? [...new Set([...current, id])] : current.filter((x) => x !== id);
+  localStorage.setItem("twister_hybrid_favs", JSON.stringify(updated));
+  return { favorites: updated };
 }
 
+// ─── HydrateFallback ─────────────────────────────────────────────────────────
 export function HydrateFallback() {
-  // We render the static parts here, and a skeleton for the dynamic parts.
-  return <HybridUI metrics={createMetrics("HYBRID")} products={null} favorites={[]} />;
+  return (
+    <div className="strat-hybrid min-h-screen">
+      <div className="max-w-5xl mx-auto px-4 pt-8 pb-24">
+        <div className="skeleton h-8 w-48 rounded mb-2 mt-4" />
+        <div className="skeleton h-12 w-72 rounded mb-6" />
+        <div className="grid sm:grid-cols-2 gap-4 mt-8">
+          <CardSkeleton />
+          <CardSkeleton lines={6} />
+        </div>
+        <div className="skeleton h-48 w-full rounded mt-8" />
+      </div>
+    </div>
+  );
 }
 
+// ─── Code snippet ────────────────────────────────────────────────────────────
+const CODE = `// server loader — baked at build, cached at edge forever
+export async function loader() {
+  return { buildTime: __BUILD_TIME__, buildId: __BUILD_ID__ };
+}
+export function headers() {
+  return { 'Cache-Control': 'public, max-age=31536000' };
+}
+
+// client loader — runs in browser after hydration
+export async function clientLoader({ serverLoader }) {
+  const serverData = await serverLoader(); // re-use static data
+  return {
+    ...serverData,
+    products: await fetchFreshProducts(), // dynamic
+    favorites: JSON.parse(localStorage.getItem('favs') ?? '[]'),
+  };
+}
+clientLoader.hydrate = true; // show HydrateFallback until ready
+
+// client action — no server round-trip
+export async function clientAction({ request }) {
+  const { id, action } = Object.fromEntries(await request.formData());
+  const favs = JSON.parse(localStorage.getItem('favs') ?? '[]');
+  localStorage.setItem('favs', JSON.stringify(
+    action === 'add' ? [...new Set([...favs, id])] : favs.filter(x => x !== id)
+  ));
+  return null;
+}`;
+
+const flowSteps = [
+  { label: "Build Time", active: true },
+  { label: "HTML Baked" },
+  { label: "Edge Cache", active: true },
+  { label: "Hydrate", active: true },
+  { label: "clientLoader", active: true },
+  { label: "Products Appear" },
+];
+
+// ─── Default Component ───────────────────────────────────────────────────────
 export default function Hybrid({ loaderData }: Route.ComponentProps) {
-  const products = "products" in loaderData ? loaderData.products : null;
-  const favorites = "favorites" in loaderData ? loaderData.favorites : [];
-  return <HybridUI metrics={loaderData.metrics} products={products} favorites={favorites} />;
-}
+  const products = "products" in loaderData ? (loaderData.products as Product[]) : null;
+  const favorites = "favorites" in loaderData ? (loaderData.favorites as string[]) : [];
+  const clientTime = "clientTime" in loaderData ? (loaderData.clientTime as string) : null;
+  const hydrationMs = "hydrationMs" in loaderData ? (loaderData.hydrationMs as number) : null;
 
-function HybridUI({
-  metrics,
-  products,
-  favorites,
-}: {
-  metrics: any;
-  products: Product[] | null;
-  favorites: string[];
-}) {
+  const buildDate = new Date(loaderData.buildTime).toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+
   return (
     <StrategyPage
-      strategy="hybrid"
       title="Hybrid Rendering"
-      metrics={metrics}
-      description={
-        <>
-          Hybrid rendering lets you mix strategies per-route. You might pre-render (SSG) your
-          marketing pages, use Server-Side Rendering (SSR) for user dashboards, and combine SSG with
-          Client-Side Rendering (CSR) for interactive widgets. This page demonstrates a static shell
-          that hydrates and fetches data natively on the client using RRv8{" "}
-          <code
-            className="px-1.5 py-0.5 rounded font-mono text-[11px] border"
-            style={{
-              backgroundColor: "var(--s-bg)",
-              color: "var(--s-text)",
-              borderColor: "var(--s-border)",
-            }}
-          >
-            clientLoader
-          </code>
-          .
-        </>
-      }
+      icon="🧬"
+      strategy="hybrid"
+      description="Static shell baked at build time, cached at the edge forever — then a client layer hydrates with fresh, personalized data. Best of both worlds."
+      metrics={loaderData.metrics}
     >
-      <SectionDivider label="Mixed Rendering Demo" />
+      {/* ── Flow Diagram ─────────────────────────────────────────────── */}
+      <section className="animate-in">
+        <p className="eyebrow mb-4">Lifecycle</p>
+        <FlowDiagram steps={flowSteps} />
+      </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Static Component */}
-        <div className="p-6 rounded-2xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-[#050505] shadow-sm">
-          <h3 className="text-lg font-bold mb-2">Static Shell (SSG)</h3>
-          <p className="text-sm text-zinc-500 mb-4">
-            This part of the page is pre-rendered at build time. It has no loading states and is
-            instantly interactive upon hydration.
-          </p>
-          <div className="p-4 bg-purple-50 dark:bg-purple-900/10 text-purple-700 dark:text-purple-300 rounded-lg text-sm font-medium border border-purple-200 dark:border-purple-800/30">
-            ✅ Instantly delivered from the edge cache
+      <SectionDivider />
+
+      {/* ── Split Evidence ───────────────────────────────────────────── */}
+      <section className="animate-in stagger">
+        <p className="eyebrow mb-4">Two Lifecycles</p>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {/* Static shell */}
+          <div className="glass-card p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="tag" style={{ color: "var(--s-accent)" }}>
+                STATIC SHELL
+              </span>
+            </div>
+            <p className="text-xs text-[var(--color-subtle)] uppercase tracking-widest mb-1">
+              Built at
+            </p>
+            <p className="font-mono text-lg font-bold text-[var(--color-fg)] mb-3">{buildDate}</p>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="tag font-mono text-xs">{loaderData.buildId}</span>
+              <span className="text-xs text-[var(--color-subtle)]">Build ID</span>
+            </div>
+            <p className="text-xs text-[var(--color-subtle)] leading-relaxed">
+              Same for every user until the next deploy. Served instantly from the edge — zero
+              origin hits.
+            </p>
           </div>
-        </div>
 
-        {/* Dynamic Client Component */}
-        <div className="p-6 rounded-2xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-[#050505] shadow-sm">
-          <h3 className="text-lg font-bold mb-2 flex justify-between items-center">
-            <span>Dynamic Data (CSR)</span>
-            {!products && (
-              <div className="animate-spin h-4 w-4 border-2 border-[var(--s-accent)] border-t-transparent rounded-full" />
-            )}
-          </h3>
-          <p className="text-sm text-zinc-500 mb-4">
-            This data is fetched on the client after hydration via <code>clientLoader</code>. Useful
-            for user-specific data.
-          </p>
-
-          <div className="space-y-3">
-            {!products ? (
-              <div className="animate-pulse space-y-3">
-                <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-3/4"></div>
-                <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-1/2"></div>
-                <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-5/6"></div>
+          {/* Client layer */}
+          {clientTime ? (
+            <div className="glass-card p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <span
+                  className="tag"
+                  style={{ color: "#10b981", borderColor: "#10b98140", background: "#10b98115" }}
+                >
+                  CLIENT LAYER
+                </span>
               </div>
-            ) : (
-              <ul className="space-y-2">
-                {products.slice(0, 3).map((p: any) => {
-                  const fetcher = useFetcher();
-                  // Optimistic UI check
-                  const isFavoriting = fetcher.formData?.get("isFavorite") === "true";
-                  const isUnfavoriting = fetcher.formData?.get("isFavorite") === "false";
-                  const isFav = isFavoriting
-                    ? true
-                    : isUnfavoriting
-                      ? false
-                      : favorites.includes(String(p.id));
-
-                  return (
-                    <li
-                      key={p.id}
-                      className="text-sm flex justify-between items-center p-2 rounded bg-zinc-50 dark:bg-zinc-900"
-                    >
-                      <div className="flex items-center gap-2 truncate pr-4">
-                        <fetcher.Form method="post">
-                          <input type="hidden" name="id" value={p.id} />
-                          <input type="hidden" name="isFavorite" value={isFav ? "false" : "true"} />
-                          <button
-                            type="submit"
-                            className="text-lg transition-transform hover:scale-110 active:scale-90"
-                            aria-label={isFav ? "Unfavorite" : "Favorite"}
-                          >
-                            {isFav ? "⭐️" : "☆"}
-                          </button>
-                        </fetcher.Form>
-                        <span className="font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                          {p.name}
-                        </span>
-                      </div>
-                      <span className="font-mono font-bold text-zinc-600 dark:text-zinc-400">
-                        ${p.price}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
+              <p className="text-xs text-[var(--color-subtle)] uppercase tracking-widest mb-1">
+                Hydrated at
+              </p>
+              <p className="font-mono text-lg font-bold text-[var(--color-fg)] mb-3">
+                {new Date(clientTime).toLocaleTimeString()}
+              </p>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="metric-value text-sm">{hydrationMs}ms</span>
+                <span className="text-xs text-[var(--color-subtle)]">since navigation start</span>
+              </div>
+              <p className="text-xs text-[var(--color-subtle)] leading-relaxed">
+                Unique to this browser session. Personalized data loaded after hydration.
+              </p>
+            </div>
+          ) : (
+            <div className="glass-card p-6 flex flex-col items-center justify-center gap-3">
+              <div className="skeleton h-5 w-32 rounded" />
+              <div className="skeleton h-8 w-48 rounded" />
+              <div className="skeleton h-4 w-40 rounded" />
+              <p className="text-xs text-[var(--color-subtle)] mt-2">Waiting for clientLoader…</p>
+            </div>
+          )}
         </div>
-      </div>
+      </section>
 
-      <SectionDivider label="How it works" />
-      <CodeSnippet code={HYBRID_CODE} filename="app/strategies/hybrid.tsx" strategy="HYBRID" />
+      <SectionDivider />
 
-      <SectionDivider label="When to use it" />
+      {/* ── Products with Favorites ───────────────────────────────────── */}
+      <section className="animate-in stagger">
+        <div className="flex items-center justify-between mb-4">
+          <p className="eyebrow">Client Products</p>
+          {favorites.length > 0 && (
+            <span className="tag">
+              {favorites.length} favorite{favorites.length !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+        {products ? (
+          <ul className="space-y-2">
+            {products.map((p) => (
+              <ProductItem key={p.id} product={p} isFavorite={favorites.includes(p.id)} />
+            ))}
+          </ul>
+        ) : (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="skeleton h-16 rounded-xl" />
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-[var(--color-subtle)] mt-3">
+          ⭐ Favorites are persisted in <code>localStorage</code> via <code>clientAction</code> — no
+          server round-trip.
+        </p>
+      </section>
+
+      <SectionDivider />
+
+      {/* ── Code Snippet ─────────────────────────────────────────────── */}
+      <section className="animate-in stagger">
+        <p className="eyebrow mb-4">Implementation</p>
+        <CodeSnippet code={CODE} language="typescript" />
+      </section>
+
+      <SectionDivider />
+
+      {/* ── Comparison ───────────────────────────────────────────────── */}
       <ComparisonPanel
         pros={[
-          "Instant TTFB from SSG shell",
-          "Fresh dynamic data on the client",
-          "Zero lifecycle hooks needed",
+          "Instant TTFB from edge cache",
+          "Client data always fresh",
+          "Persistent localStorage state",
         ]}
         cons={[
-          "Requires client-side JavaScript to see data",
-          "Two data-fetching lifecycles (build + client)",
-          "SEO bots might miss CSR data",
+          "SEO bots miss client data",
+          "Two data lifecycles to manage",
+          "Requires clientLoader support",
         ]}
         related={[
-          { to: "/ssg", label: "SSG", key: "SSG" },
-          { to: "/csr", label: "CSR", key: "CSR" },
-          { to: "/ppr", label: "PPR", key: "PPR" },
+          { to: "/ssg", label: "SSG" },
+          { to: "/csr", label: "CSR" },
+          { to: "/ppr", label: "Stream+Cache" },
         ]}
       />
     </StrategyPage>
   );
 }
-
-const HYBRID_CODE = `// react-router.config.ts
-export default {
-  prerender: ["/hybrid"], // Build the shell at compile-time
-};
-
-// Returns static shell data during SSG build
-export async function loader() {
-  return { staticContent: "Baked at build time" };
-}
-
-// HydrateFallback shows instantly while clientLoader runs
-export function HydrateFallback() {
-  return <HybridUI loading={true} />;
-}
-
-// Runs on the client to fetch dynamic holes
-export async function clientLoader({ serverLoader }) {
-  const serverData = await serverLoader();
-  const products = await fetchProductList();
-  return { ...serverData, products };
-}
-clientLoader.hydrate = true; // Tell RR to run this on mount
-`;

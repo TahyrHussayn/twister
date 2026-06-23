@@ -1,174 +1,544 @@
 import type { Route } from "./+types/ssg";
-import { fetchUserProfile, fetchServerTimestamp } from "~/lib/data";
+import { makeUser, makePosts } from "~/lib/seed";
 import { createMetrics } from "~/lib/metrics";
+import { StrategyPage, SectionDivider } from "~/components/strategy-page";
 import { CodeSnippet } from "~/components/code-snippet";
 import { ComparisonPanel } from "~/components/comparison-panel";
-import { StrategyPage, SectionDivider } from "~/components/strategy-page";
+import { FlowDiagram } from "~/components/flow-diagram";
 
-export function meta() {
-  return [
-    { title: "SSG — Static Site Generation" },
-    {
-      name: "description",
-      content:
-        "Static Site Generation demo: pre-rendered at build time, served instantly from the edge with zero server-side computation.",
-    },
-  ];
-}
+declare const __BUILD_TIME__: number;
+declare const __BUILD_ID__: string;
 
+// ─── Loader ─────────────────────────────────────────────────────────────────────
 export async function loader() {
-  const profile = await fetchUserProfile(100);
-  return { profile, buildTimestamp: fetchServerTimestamp(), metrics: createMetrics("SSG") };
+  const buildTime = typeof __BUILD_TIME__ !== "undefined" ? __BUILD_TIME__ : 1_719_000_000_000;
+  const buildId = typeof __BUILD_ID__ !== "undefined" ? __BUILD_ID__ : "DEV-001";
+  const buildSeed = Math.floor(buildTime / 1000);
+
+  return {
+    user: makeUser(buildSeed),
+    posts: makePosts(buildSeed, 4),
+    buildTime,
+    buildId,
+    metrics: createMetrics("SSG"),
+  };
 }
 
-export default function SSG({ loaderData }: Route.ComponentProps) {
-  const { profile, buildTimestamp, metrics } = loaderData;
+export function headers() {
+  return {
+    "Cache-Control": "public, max-age=31536000, immutable",
+    "X-Render-Strategy": "SSG",
+  };
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────────
+function formatBuildTime(ts: number): string {
+  return new Date(ts).toLocaleString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZone: "UTC",
+    timeZoneName: "short",
+  });
+}
+
+function buildAge(ts: number): string {
+  const diff = Date.now() - ts;
+  const s = Math.floor(diff / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  const d = Math.floor(h / 24);
+  if (d > 0) return `${d}d ${h % 24}h ago`;
+  if (h > 0) return `${h}h ${m % 60}m ago`;
+  if (m > 0) return `${m}m ago`;
+  return `${s}s ago`;
+}
+
+function postAge(buildTime: number, postTs: string): string {
+  const diff = buildTime - new Date(postTs).getTime();
+  const d = Math.floor(diff / 86_400_000);
+  if (d > 0) return `${d}d before build`;
+  const h = Math.floor(diff / 3_600_000);
+  return `${h}h before build`;
+}
+
+// ─── Comparison table data ───────────────────────────────────────────────────────
+const SSG_VS_SSR = [
+  { aspect: "Data Source", ssg: "Build-time snapshot", ssr: "Live per-request fetch" },
+  { aspect: "Freshness", ssg: "Frozen until redeploy", ssr: "Always fresh" },
+  { aspect: "TTFB", ssg: "~5–20ms (edge cache)", ssr: "~80–300ms (compute)" },
+  { aspect: "Compute Cost", ssg: "Zero at runtime", ssr: "CPU on every request" },
+  { aspect: "Best For", ssg: "Docs, blogs, marketing", ssr: "Dashboards, user content" },
+];
+
+// ─── Component ──────────────────────────────────────────────────────────────────
+export default function SSGPage({ loaderData }: Route.ComponentProps) {
+  const { user, posts, buildTime, buildId } = loaderData;
+
+  const flowSteps = [
+    { icon: "🔨", label: "Build Time", sublabel: "vp build", active: true },
+    { icon: "📦", label: "Data Fetched", sublabel: "once, frozen", active: true },
+    { icon: "🍞", label: "HTML Baked", sublabel: "static output", active: true },
+    { icon: "⚡", label: "Edge Cache", sublabel: "immutable CDN", active: true },
+    { icon: "👤", label: "→ Instant", sublabel: "user request" },
+  ];
 
   return (
     <StrategyPage
       strategy="ssg"
       title="Static Site Generation"
-      metrics={metrics}
-      description={
-        <>
-          This page was pre-rendered at <strong>build time</strong>. The HTML is static — served
-          instantly from the edge with zero server-side computation. The data is baked into the HTML
-          when the build runs.
-        </>
-      }
+      icon="⚡"
+      description="HTML is generated once at build time and served from the CDN edge forever. Zero runtime compute. Instant TTFB. Data is frozen until the next deployment."
+      metrics={loaderData.metrics}
     >
-      <SectionDivider label="Request Lifecycle" />
-
-      {/* Flow Diagram */}
-      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 p-8 rounded-2xl border border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-[#050505]">
-        <div className="flow-step active">
-          <span className="text-lg">🛠️</span>
-          <span>Build Time</span>
+      {/* ── Flow Diagram ──────────────────────────────────────────────────────── */}
+      <section style={{ marginBottom: 48 }}>
+        <div className="eyebrow" style={{ color: "#64748b", marginBottom: 12 }}>
+          Build → Cache → Serve
         </div>
-        <div className="flow-arrow active">→</div>
-        <div className="flow-step active">
-          <span className="text-lg">📄</span>
-          <span>Static HTML</span>
-        </div>
-        <div className="flow-arrow active">→</div>
-        <div className="flow-step active">
-          <span className="text-lg">🌍</span>
-          <span>CDN Cache</span>
-        </div>
-        <div className="flow-arrow active">→</div>
-        <div className="flow-step active">
-          <span className="text-lg">⚡</span>
-          <span>Instant Serve</span>
-        </div>
-      </div>
+        <FlowDiagram steps={flowSteps} />
+      </section>
 
-      <SectionDivider label="How it works" />
-      <CodeSnippet code={SSG_CODE} filename="app/strategies/ssg.tsx" strategy="SSG" />
+      <SectionDivider label="The Proof — Frozen at Build Time" />
 
-      <div
-        className="rounded-2xl border p-5 text-sm my-6 shadow-sm flex items-center gap-4"
-        style={{ backgroundColor: "var(--s-bg)", borderColor: "var(--s-border)" }}
-      >
-        <span className="text-2xl filter drop-shadow-sm">🧊</span>
-        <div>
-          <span className="font-bold text-sm block mb-0.5" style={{ color: "var(--s-text)" }}>
-            Data frozen at build time
-          </span>
-          <span className="text-xs opacity-80" style={{ color: "var(--s-text)" }}>
-            This page will not update until the next deployment.
-          </span>
-        </div>
-      </div>
-
-      <SectionDivider label="Live demo" />
-
-      <div className="grid gap-6 sm:grid-cols-2">
-        <section
-          className="relative overflow-hidden rounded-2xl border bg-white dark:bg-[#050505] p-6 shadow-sm transition-shadow hover:shadow-md"
-          style={{ borderColor: "var(--s-border)" }}
+      {/* ── The Proof Panel ───────────────────────────────────────────────────── */}
+      <section style={{ marginBottom: 48 }}>
+        {/* Callout banner */}
+        <div
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(6,182,212,0.08) 100%)",
+            border: "1px solid rgba(16,185,129,0.3)",
+            borderRadius: 16,
+            padding: "24px 28px",
+            marginBottom: 28,
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 16,
+          }}
         >
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <span className="text-6xl text-emerald-500">👤</span>
-          </div>
-          <h2 className="font-bold text-sm mb-5 text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-            <span
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ backgroundColor: "var(--s-accent)" }}
-            />
-            Pre-rendered Profile
-          </h2>
-          <div className="flex items-center gap-5 relative z-10">
-            <img
-              src={profile.avatar}
-              alt={profile.name}
-              className="w-14 h-14 rounded-full ring-2 ring-white dark:ring-zinc-900 shadow-sm"
-            />
-            <div>
-              <p className="font-bold text-zinc-900 dark:text-zinc-100">{profile.name}</p>
-              <p className="text-sm text-zinc-500">{profile.email}</p>
-              <p className="text-[10px] font-mono text-zinc-400 mt-1.5 bg-zinc-100 dark:bg-zinc-800/50 inline-block px-2 py-0.5 rounded">
-                ID: {profile.id}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section
-          className="relative overflow-hidden rounded-2xl border bg-white dark:bg-[#050505] p-6 shadow-sm transition-shadow hover:shadow-md"
-          style={{ borderColor: "var(--s-border)" }}
-        >
-          <h2 className="font-bold text-sm mb-5 text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-            <span
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ backgroundColor: "var(--s-accent)" }}
-            />
-            Timestamps
-          </h2>
-          <div className="space-y-5">
-            <div>
-              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
-                Build Time (Frozen)
-              </p>
+          <span style={{ fontSize: 30, flexShrink: 0 }}>🧊</span>
+          <div>
+            <p style={{ margin: "0 0 6px", fontWeight: 800, fontSize: 16, color: "#6ee7b7" }}>
+              This data does not change until the next deployment.
+            </p>
+            <p style={{ margin: 0, fontSize: 13, color: "#64748b", lineHeight: 1.7 }}>
+              Reload this page 100 times — same user, same posts, same buildId. The seed was frozen
+              when{" "}
               <code
-                className="text-sm font-mono font-bold px-2 py-1 rounded-md"
-                style={{ backgroundColor: "var(--s-bg)", color: "var(--s-text)" }}
+                style={{
+                  color: "#34d399",
+                  background: "rgba(16,185,129,0.1)",
+                  padding: "1px 6px",
+                  borderRadius: 4,
+                }}
               >
-                {buildTimestamp}
-              </code>
+                vp build
+              </code>{" "}
+              ran.
+            </p>
+          </div>
+        </div>
+
+        {/* Build time + ID */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+          {/* Baked at */}
+          <div
+            style={{
+              padding: "28px",
+              background: "rgba(16,185,129,0.06)",
+              border: "1px solid rgba(16,185,129,0.25)",
+              borderRadius: 16,
+            }}
+          >
+            <div className="eyebrow" style={{ color: "#10b981", marginBottom: 10, fontSize: 10 }}>
+              BAKED AT
+            </div>
+            <p
+              style={{
+                margin: "0 0 8px",
+                fontSize: 15,
+                fontWeight: 700,
+                color: "#6ee7b7",
+                lineHeight: 1.4,
+              }}
+            >
+              {formatBuildTime(buildTime)}
+            </p>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 12,
+                fontFamily: "ui-monospace, monospace",
+                color: "#475569",
+              }}
+            >
+              {buildAge(buildTime)}
+            </p>
+          </div>
+
+          {/* Build ID */}
+          <div
+            style={{
+              padding: "28px",
+              background: "rgba(255,255,255,0.02)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 16,
+            }}
+          >
+            <div className="eyebrow" style={{ color: "#64748b", marginBottom: 10, fontSize: 10 }}>
+              BUILD ID
+            </div>
+            <p
+              style={{
+                margin: "0 0 8px",
+                fontFamily: "ui-monospace, monospace",
+                fontSize: 22,
+                fontWeight: 800,
+                color: "#10b981",
+                letterSpacing: "0.05em",
+              }}
+            >
+              {buildId}
+            </p>
+            <p style={{ margin: 0, fontSize: 12, color: "#334155" }}>Changes only on new deploy</p>
+          </div>
+        </div>
+
+        {/* NOW comparison */}
+        <div
+          style={{
+            padding: "18px 24px",
+            background: "rgba(255,255,255,0.02)",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: 12,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
+          }}
+        >
+          <div>
+            <span
+              style={{
+                fontSize: 11,
+                color: "#334155",
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                marginRight: 10,
+              }}
+            >
+              Server time (always equals buildTime in SSG):
+            </span>
+            <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 13, color: "#64748b" }}>
+              {new Date(buildTime).toISOString()}
+            </span>
+          </div>
+          <span
+            style={{
+              padding: "5px 14px",
+              borderRadius: 9999,
+              background: "rgba(16,185,129,0.15)",
+              color: "#10b981",
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+          >
+            Cache-Control: immutable
+          </span>
+        </div>
+      </section>
+
+      <SectionDivider label="Frozen User Profile" />
+
+      {/* ── Frozen User Profile ───────────────────────────────────────────────── */}
+      <section style={{ marginBottom: 48 }}>
+        <div
+          className="glass-card"
+          style={{
+            padding: "28px",
+            borderRadius: 16,
+            border: "1px solid rgba(16,185,129,0.2)",
+            background: "rgba(16,185,129,0.04)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 18, marginBottom: 24 }}>
+            <div
+              className="avatar"
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                background: user.avatarColor,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 22,
+                fontWeight: 800,
+                color: "#fff",
+                flexShrink: 0,
+                boxShadow: `0 0 24px ${user.avatarColor}44`,
+                outline: "3px solid rgba(16,185,129,0.4)",
+              }}
+            >
+              {user.initials}
             </div>
             <div>
-              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
-                Now (Browser)
-              </p>
-              <code className="text-sm font-mono text-zinc-500 bg-zinc-100 dark:bg-zinc-800/50 px-2 py-1 rounded-md">
-                {new Date().toISOString()}
-              </code>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                <p style={{ margin: 0, fontWeight: 800, fontSize: 20, color: "var(--color-fg)" }}>
+                  {user.name}
+                </p>
+                <span
+                  style={{
+                    fontSize: 10,
+                    padding: "2px 8px",
+                    borderRadius: 9999,
+                    background: "rgba(16,185,129,0.15)",
+                    color: "#10b981",
+                    fontWeight: 700,
+                  }}
+                >
+                  🧊 FROZEN
+                </span>
+              </div>
+              <p style={{ margin: "0 0 4px", fontSize: 13, color: "#64748b" }}>{user.email}</p>
+              <span
+                style={{
+                  fontSize: 11,
+                  padding: "3px 10px",
+                  borderRadius: 9999,
+                  background: "rgba(16,185,129,0.1)",
+                  color: "#34d399",
+                  fontWeight: 600,
+                }}
+              >
+                {user.role}
+              </span>
             </div>
           </div>
-        </section>
-      </div>
 
-      <SectionDivider label="When to use it" />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {[
+              ["📍 City", user.city],
+              ["📅 Joined", user.joinedDate],
+              ["🆔 User ID", user.id],
+              ["🌐 Seed", String(Math.floor(buildTime / 1000))],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                style={{
+                  padding: "10px 14px",
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  borderRadius: 10,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: 12,
+                }}
+              >
+                <span style={{ color: "#475569" }}>{label}</span>
+                <span style={{ color: "#94a3b8", fontFamily: "ui-monospace, monospace" }}>
+                  {value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <SectionDivider label="Snapshot Posts" />
+
+      {/* ── Posts ─────────────────────────────────────────────────────────────── */}
+      <section style={{ marginBottom: 48 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+            gap: 14,
+          }}
+        >
+          {posts.map((post) => (
+            <div
+              key={post.id}
+              style={{
+                padding: "20px",
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                borderRadius: 14,
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
+              {/* Frozen badge */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: 12,
+                  right: 12,
+                  fontSize: 10,
+                  padding: "2px 8px",
+                  borderRadius: 9999,
+                  background: "rgba(16,185,129,0.1)",
+                  color: "#10b981",
+                  fontWeight: 700,
+                }}
+              >
+                🧊 baked {postAge(buildTime, post.ts)}
+              </div>
+
+              <h3
+                style={{
+                  margin: "0 0 8px",
+                  fontSize: 15,
+                  fontWeight: 700,
+                  color: "var(--color-fg)",
+                  lineHeight: 1.4,
+                  paddingRight: 80,
+                }}
+              >
+                {post.title}
+              </h3>
+              <p style={{ margin: "0 0 12px", fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>
+                {post.excerpt}
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                {post.tags.map((tag: string) => (
+                  <span
+                    key={tag}
+                    style={{
+                      fontSize: 11,
+                      padding: "2px 8px",
+                      borderRadius: 9999,
+                      background: "rgba(16,185,129,0.12)",
+                      color: "#34d399",
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: 11,
+                  color: "#334155",
+                }}
+              >
+                <span>by {post.author}</span>
+                <span>{post.views.toLocaleString()} views</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <SectionDivider label="SSG vs SSR — Trade-off Matrix" />
+
+      {/* ── Comparison Table ──────────────────────────────────────────────────── */}
+      <section style={{ marginBottom: 48 }}>
+        <div
+          style={{
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: 16,
+            overflow: "hidden",
+          }}
+        >
+          {/* Table header */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1.2fr 1fr 1fr",
+              background: "rgba(255,255,255,0.04)",
+              borderBottom: "1px solid rgba(255,255,255,0.08)",
+            }}
+          >
+            {["Aspect", "⚡ SSG", "🖥️ SSR"].map((h, i) => (
+              <div
+                key={h}
+                style={{
+                  padding: "14px 20px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: i === 0 ? "#475569" : i === 1 ? "#10b981" : "#3b82f6",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                {h}
+              </div>
+            ))}
+          </div>
+
+          {/* Table rows */}
+          {SSG_VS_SSR.map((row, i) => (
+            <div
+              key={row.aspect}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1.2fr 1fr 1fr",
+                borderBottom:
+                  i < SSG_VS_SSR.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
+                background: i % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent",
+              }}
+            >
+              <div
+                style={{ padding: "14px 20px", fontSize: 13, color: "#94a3b8", fontWeight: 600 }}
+              >
+                {row.aspect}
+              </div>
+              <div style={{ padding: "14px 20px", fontSize: 13, color: "#6ee7b7" }}>{row.ssg}</div>
+              <div style={{ padding: "14px 20px", fontSize: 13, color: "#93c5fd" }}>{row.ssr}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <SectionDivider label="Loader Pattern" />
+
+      {/* ── Code snippet ──────────────────────────────────────────────────────── */}
+      <section style={{ marginBottom: 48 }}>
+        <CodeSnippet code={ssgCodeSnippet} filename="app/strategies/ssg.tsx" />
+      </section>
+
+      {/* ── Comparison ────────────────────────────────────────────────────────── */}
       <ComparisonPanel
-        pros={["Near-instant TTFB", "Perfect SEO", "Zero runtime compute cost"]}
-        cons={["Data can be stale", "Must rebuild to update", "Not for dynamic data"]}
+        pros={["Instant TTFB from edge cache", "Zero runtime compute", "Perfect Core Web Vitals"]}
+        cons={["Stale until next build", "Cannot personalize", "Rebuild required for updates"]}
         related={[
           { to: "/isr", label: "ISR", key: "ISR" },
-          { to: "/ppr", label: "PPR", key: "PPR" },
-          { to: "/streaming", label: "Streaming", key: "Streaming" },
+          { to: "/ppr", label: "Stream+Cache", key: "ppr" },
+          { to: "/ssr", label: "SSR", key: "SSR" },
         ]}
       />
     </StrategyPage>
   );
 }
 
-const SSG_CODE = `// react-router.config.ts
-export default {
-  prerender: ["/ssg", "/ppr", "/hybrid"],
-} satisfies Config;
+const ssgCodeSnippet = `// Build-time constants injected by Vite
+declare const __BUILD_TIME__: number;
+declare const __BUILD_ID__: string;
 
-// app/strategies/ssg.tsx
 export async function loader() {
-  const profile = await fetchUserProfile(100);
-  return { profile, buildTimestamp };
+  // Seed is derived from build timestamp — frozen forever
+  const buildTime = __BUILD_TIME__;
+  const buildSeed = Math.floor(buildTime / 1000);
+
+  return {
+    user: makeUser(buildSeed),   // Same user every request
+    posts: makePosts(buildSeed), // Same posts every request
+    buildTime,
+    buildId: __BUILD_ID__,
+  };
+}
+
+// CDN caches this forever — zero compute at runtime
+export function headers() {
+  return {
+    'Cache-Control': 'public, max-age=31536000, immutable',
+  };
 }`;

@@ -1,341 +1,362 @@
-import { Suspense, use, useState } from "react";
-
 import type { Route } from "./+types/ppr";
-import { fetchUserProfile, fetchRecommendations, type UserProfile } from "~/lib/data";
+import { makeUser, makePosts, makeAnalytics, fetchWithDelay, liveSeed } from "~/lib/seed";
+import { getEdgeInfo } from "~/lib/edge-info";
 import { createMetrics } from "~/lib/metrics";
+import { StrategyPage, SectionDivider } from "~/components/strategy-page";
+import { FlowDiagram } from "~/components/flow-diagram";
 import { CodeSnippet } from "~/components/code-snippet";
 import { ComparisonPanel } from "~/components/comparison-panel";
 import { CardSkeleton } from "~/components/skeleton";
-import { StrategyPage, SectionDivider } from "~/components/strategy-page";
-import { getEdgeInfo } from "~/lib/edge-info";
+import { Suspense, use } from "react";
 
-export function meta() {
-  return [
-    { title: "PPR — Partial Prerendering" },
-    {
-      name: "description",
-      content:
-        "Partial Prerendering demo: static HTML shell baked at build time with dynamic client-side holes that load progressively after hydration.",
-    },
-  ];
-}
+import { getSimulatedLatency } from "~/lib/latency";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const url = new URL(request.url);
-  const cacheKey = new Request(new URL("/api/profile", url.origin).toString(), {
-    method: "GET",
-  });
+  const seed = liveSeed();
+  const userDelay = getSimulatedLatency(request, 0);
+  const cacheKey = new Request(new URL("/ppr-shell-user", request.url).toString());
 
-  let profile: UserProfile;
+  let shellUser = makeUser(seed);
+  let shellCacheStatus: "HIT" | "MISS" = "MISS";
 
-  const cache = typeof caches !== "undefined" ? caches.default : undefined;
-
-  if (cache) {
-    const cachedResponse = await cache.match(cacheKey);
-    if (cachedResponse) {
-      profile = await cachedResponse.json();
-    } else {
-      profile = await fetchUserProfile(50);
-      const response = new Response(JSON.stringify(profile), {
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "s-maxage=3600",
-        },
-      });
-      await cache.put(cacheKey, response);
-    }
+  const cached = await caches.default.match(cacheKey);
+  if (cached) {
+    try {
+      shellUser = await cached.json();
+      shellCacheStatus = "HIT";
+    } catch {}
   } else {
-    profile = await fetchUserProfile(50);
+    try {
+      await caches.default.put(
+        cacheKey,
+        new Response(JSON.stringify(shellUser), {
+          headers: { "Content-Type": "application/json", "Cache-Control": "max-age=300" },
+        }),
+      );
+    } catch {}
   }
 
-  const recommendationsPromise = fetchRecommendations(1500);
-  const timestampPromise = new Promise<string>((resolve) =>
-    setTimeout(() => resolve(new Date().toISOString()), 800),
-  );
-
   return {
-    profile,
-    recommendationsPromise,
-    timestampPromise,
+    // Shell: resolved synchronously from cache
+    shellUser,
+    shellCacheStatus,
+    // Dynamic holes: un-awaited (stream via Suspense)
+    postsPromise: fetchWithDelay(makePosts(seed, 3), 800 + userDelay),
+    analyticsPromise: fetchWithDelay(makeAnalytics(seed), 1200 + userDelay),
     edgeInfo: getEdgeInfo(request),
+    renderedAt: new Date().toISOString(),
     metrics: createMetrics("PPR"),
   };
 }
 
-export default function PPR({ loaderData }: Route.ComponentProps) {
-  const { profile, recommendationsPromise, timestampPromise, edgeInfo, metrics } = loaderData;
+export function headers() {
+  return { "X-Render-Strategy": "PPR" };
+}
+
+function DynamicPosts({ promise }: { promise: Promise<ReturnType<typeof makePosts>> }) {
+  const posts = use(promise);
+  return (
+    <div className="animate-in" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span
+          className="tag"
+          style={{
+            background: "rgba(244,63,94,0.15)",
+            color: "#fda4af",
+            borderColor: "rgba(244,63,94,0.3)",
+          }}
+        >
+          DYNAMIC HOLE
+        </span>
+        <span className="eyebrow" style={{ color: "#f43f5e" }}>
+          Posts — streamed ~800ms
+        </span>
+      </div>
+      <ul
+        style={{
+          listStyle: "none",
+          padding: 0,
+          margin: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+        }}
+      >
+        {posts.map((p) => (
+          <li key={p.id} className="data-card p-4">
+            <p
+              style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: "var(--color-fg)" }}
+            >
+              {p.title}
+            </p>
+            <p style={{ margin: 0, fontSize: 11, color: "var(--color-subtle)" }}>
+              {p.excerpt.slice(0, 80)}...
+            </p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function DynamicAnalytics({ promise }: { promise: Promise<ReturnType<typeof makeAnalytics>> }) {
+  const a = use(promise);
+  return (
+    <div className="animate-in" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span
+          className="tag"
+          style={{
+            background: "rgba(244,63,94,0.15)",
+            color: "#fda4af",
+            borderColor: "rgba(244,63,94,0.3)",
+          }}
+        >
+          DYNAMIC HOLE
+        </span>
+        <span className="eyebrow" style={{ color: "#f43f5e" }}>
+          Analytics — streamed ~1200ms
+        </span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+        <div className="stat-card" style={{ padding: "14px 16px" }}>
+          <p className="stat-label">Views</p>
+          <p className="stat-value" style={{ fontSize: "1.5rem" }}>
+            {a.views.toLocaleString()}
+          </p>
+        </div>
+        <div className="stat-card" style={{ padding: "14px 16px" }}>
+          <p className="stat-label">RPM</p>
+          <p className="stat-value" style={{ fontSize: "1.5rem" }}>
+            {a.rpm.toLocaleString()}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function PPRPage({ loaderData }: Route.ComponentProps) {
+  const {
+    shellUser,
+    shellCacheStatus,
+    postsPromise,
+    analyticsPromise,
+    edgeInfo: _edgeInfo,
+    renderedAt: _renderedAt,
+    metrics,
+  } = loaderData;
+
+  const flowSteps = [
+    { icon: "🌐", label: "Request", active: true },
+    { icon: "🔍", label: "Cache Check", active: true },
+    { icon: "🐚", label: "Shell Instant", active: true },
+    { icon: "🕳️", label: "Stream Posts 800ms", active: true },
+    { icon: "🕳️", label: "Stream Analytics 1200ms", active: true },
+  ];
 
   return (
     <StrategyPage
       strategy="ppr"
-      title="Partial Prerendering"
+      title="Streaming + Edge Cache"
+      icon="🧩"
+      description="Combines an edge-cached shell (instant TTFB) with deferred Suspense boundaries for dynamic sections. React Router v8 achieves this via the Cache API + un-awaited promises — conceptually similar to Next.js PPR but implemented differently."
       metrics={metrics}
-      description="Pre-rendered HTML shell served from the edge. The profile is cached at the edge. Dynamic sections are streamed in — the shell renders instantly, holes fill in progressively via Suspense."
+      cacheStatus={shellCacheStatus}
     >
-      <SectionDivider label="Request Lifecycle" />
-
-      {/* Flow Diagram */}
-      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 p-8 rounded-2xl border border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-[#050505]">
-        <div className="flow-step active">
-          <span className="text-lg">🔎</span>
-          <span>Cache Check</span>
+      <section style={{ marginBottom: 48 }}>
+        <div className="eyebrow" style={{ color: "#64748b", marginBottom: 12 }}>
+          Lifecycle
         </div>
-        <div className="flow-arrow active">→</div>
-        <div className="flow-step active">
-          <span className="text-lg">⚡</span>
-          <span>Instant Shell</span>
-        </div>
-        <div className="flow-arrow active">→</div>
-        <div className="flow-step active">
-          <span className="text-lg">🧩</span>
-          <span>Stream Holes</span>
-        </div>
-      </div>
+        <FlowDiagram steps={flowSteps} />
+      </section>
 
-      <SectionDivider label="How it works" />
-      <CodeSnippet code={CODE} filename="app/strategies/ppr.tsx" strategy="PPR" />
+      <SectionDivider label="Timeline Visualization" />
 
-      <div
-        className="rounded-2xl border p-5 text-sm my-6 flex items-center gap-3 shadow-sm"
-        style={{ backgroundColor: "var(--s-bg)", borderColor: "var(--s-border)" }}
-      >
+      {/* Gantt-style Timeline */}
+      <section style={{ marginBottom: 48 }}>
         <div
-          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-          style={{ backgroundColor: "var(--s-accent)", color: "white" }}
+          style={{
+            background: "rgba(255,255,255,0.01)",
+            border: "1px solid rgba(255,255,255,0.05)",
+            borderRadius: 16,
+            padding: 24,
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+          }}
         >
-          <span className="text-sm">💡</span>
-        </div>
-        <p className="font-medium text-xs leading-relaxed" style={{ color: "var(--s-text)" }}>
-          Static shell served from Edge Cache — dynamic holes streamed in via Suspense.
-        </p>
-      </div>
-
-      <SectionDivider label="Live demo" />
-
-      <section
-        className="relative overflow-hidden rounded-2xl border bg-white dark:bg-[#050505] p-6 shadow-sm transition-shadow hover:shadow-md animate-in fade-in zoom-in-95 duration-500 mb-6"
-        style={{ borderColor: "var(--s-border)" }}
-      >
-        <div className="absolute top-0 right-0 p-4 opacity-10">
-          <span className="text-6xl text-rose-500">🧱</span>
-        </div>
-        <h2 className="font-bold text-sm mb-5 text-zinc-900 dark:text-zinc-100 flex items-center gap-3 relative z-10">
-          <span
-            className="inline-flex px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase border"
-            style={{
-              backgroundColor: "var(--s-bg)",
-              color: "var(--s-text)",
-              borderColor: "var(--s-border)",
-            }}
-          >
-            STATIC SHELL
-          </span>
-          User Profile (Edge Cached)
-        </h2>
-        <div className="flex items-center gap-5 relative z-10">
-          <img
-            src={profile.avatar}
-            alt={profile.name}
-            className="w-14 h-14 rounded-full ring-2 ring-white dark:ring-zinc-900 shadow-sm"
-          />
-          <div>
-            <p className="font-bold text-zinc-900 dark:text-zinc-100">{profile.name}</p>
-            <p className="text-sm text-zinc-500">{profile.email}</p>
-          </div>
-        </div>
-        <div className="mt-5 pt-3 border-t border-zinc-100 dark:border-zinc-800/50 relative z-10 flex flex-wrap gap-4 justify-between items-center">
-          <p className="text-[10px] font-bold tracking-wider uppercase flex items-center gap-1.5 text-zinc-500">
-            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
-            Cached at Edge
-          </p>
-
-          <div className="flex items-center gap-3 text-xs text-zinc-500">
-            <div className="flex items-center gap-1.5" title="Edge Colo">
-              <span className="text-rose-500">📍</span>
-              <span className="font-mono">{edgeInfo.colo}</span>
+          {[
+            {
+              label: "Shell Paint",
+              time: "0ms",
+              pct: 15,
+              color: "#f43f5e",
+              desc: "Edge-cached static structure served instantly",
+            },
+            {
+              label: "Posts Chunk",
+              time: "800ms",
+              pct: 55,
+              color: "#fda4af",
+              desc: "First dynamic segment resolves & streams in",
+            },
+            {
+              label: "Analytics Chunk",
+              time: "1200ms",
+              pct: 90,
+              color: "#fda4af",
+              desc: "Second dynamic segment completes connection",
+            },
+          ].map((bar) => (
+            <div key={bar.label}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: 11,
+                  marginBottom: 4,
+                }}
+              >
+                <span style={{ fontWeight: 700, color: "#cbd5e1" }}>{bar.label}</span>
+                <span style={{ color: bar.color, fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+                  {bar.time}
+                </span>
+              </div>
+              <div className="bench-bar" style={{ height: 8, marginBottom: 4 }}>
+                <div
+                  className="bench-fill"
+                  style={{ width: `${bar.pct}%`, background: bar.color }}
+                />
+              </div>
+              <p style={{ margin: 0, fontSize: 10, color: "#475569" }}>{bar.desc}</p>
             </div>
-            <div className="flex items-center gap-1.5" title="Country">
-              <span className="text-rose-500">🌍</span>
-              <span className="font-mono">{edgeInfo.country}</span>
-            </div>
-            <div className="flex items-center gap-1.5" title="City">
-              <span className="text-rose-500">🏙️</span>
-              <span className="font-mono">{edgeInfo.city}</span>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
-      <div className="grid gap-6 sm:grid-cols-2">
-        <Suspense fallback={<CardSkeleton />}>
-          <DynamicRecs recommendationsPromise={recommendationsPromise} />
-        </Suspense>
-        <Suspense fallback={<CardSkeleton />}>
-          <DynamicTimestamp timestampPromise={timestampPromise} />
-        </Suspense>
-      </div>
-      <div className="mt-6">
-        <Suspense fallback={<CardSkeleton />}>
-          <DynamicCounter />
-        </Suspense>
-      </div>
+      <SectionDivider label="Split Architecture Demo" />
 
-      <SectionDivider label="When to use it" />
+      {/* Split layout */}
+      <section
+        style={{
+          marginBottom: 48,
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          gap: 24,
+        }}
+      >
+        {/* Left Column: Shell */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span
+              className="tag"
+              style={{
+                background: "rgba(16,185,129,0.1)",
+                color: "#10b981",
+                borderColor: "rgba(16,185,129,0.2)",
+              }}
+            >
+              STATIC SHELL
+            </span>
+            <span className="eyebrow" style={{ color: "#10b981" }}>
+              Shell — resolved ~0ms
+            </span>
+          </div>
+
+          <div
+            className="glass-card p-6"
+            style={{ display: "flex", flexDirection: "column", gap: 16 }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span
+                className="tag"
+                style={{
+                  background:
+                    shellCacheStatus === "HIT" ? "rgba(16,185,129,0.1)" : "rgba(245,158,11,0.1)",
+                  color: shellCacheStatus === "HIT" ? "#10b981" : "#f59e0b",
+                  borderColor:
+                    shellCacheStatus === "HIT" ? "rgba(16,185,129,0.2)" : "rgba(245,158,11,0.2)",
+                }}
+              >
+                Shell Cache {shellCacheStatus}
+              </span>
+              <span style={{ fontSize: 11, color: "#475569" }}>Served via Cache API</span>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div className="avatar" style={{ background: shellUser.avatarColor }}>
+                {shellUser.initials}
+              </div>
+              <div>
+                <h4 style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 700 }}>
+                  {shellUser.name}
+                </h4>
+                <p style={{ margin: 0, fontSize: 11, color: "#64748b" }}>
+                  {shellUser.role} · {shellUser.city}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Dynamic holes */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <Suspense fallback={<CardSkeleton />}>
+            <DynamicPosts promise={postsPromise} />
+          </Suspense>
+
+          <Suspense fallback={<CardSkeleton />}>
+            <DynamicAnalytics promise={analyticsPromise} />
+          </Suspense>
+        </div>
+      </section>
+
+      <SectionDivider label="How it works" />
+      <section style={{ marginBottom: 48 }}>
+        <CodeSnippet code={PPR_CODE} filename="app/strategies/ppr.tsx" />
+      </section>
+
+      <SectionDivider label="Strategy Assessment" />
       <ComparisonPanel
-        pros={["Instant static shell", "Dynamic content streamed", "Great LCP & TTFB"]}
-        cons={["Complex cache invalidation", "Requires Edge infrastructure", "More moving parts"]}
+        pros={[
+          "Instant shell via Cache API",
+          "Dynamic content via Suspense",
+          "Best of SSG + SSR combined",
+        ]}
+        cons={[
+          "Cache invalidation complexity",
+          "Two different data lifecycles",
+          "Requires streaming-capable infra",
+        ]}
         related={[
-          { to: "/ssg", label: "SSG", key: "SSG" },
-          { to: "/streaming", label: "Streaming", key: "Streaming" },
-          { to: "/islands", label: "Islands", key: "Islands" },
+          { to: "/ssg", label: "SSG" },
+          { to: "/streaming", label: "Streaming" },
+          { to: "/isr", label: "ISR" },
         ]}
       />
     </StrategyPage>
   );
 }
 
-function DynamicRecs({
-  recommendationsPromise,
-}: {
-  recommendationsPromise: Promise<Awaited<ReturnType<typeof fetchRecommendations>>>;
-}) {
-  const data = use(recommendationsPromise);
-  return (
-    <section className="relative overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-[#050505] p-6 shadow-sm transition-shadow hover:shadow-md h-full">
-      <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
-      <h2 className="font-bold text-sm mb-5 text-zinc-900 dark:text-zinc-100 flex items-center gap-3 relative z-10">
-        <span className="inline-flex px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase border border-rose-200/50 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400">
-          DYNAMIC HOLE
-        </span>
-        Recommendations
-      </h2>
-      <div className="grid gap-3">
-        {data.map((r) => (
-          <div
-            key={r.id}
-            className="rounded-xl border border-zinc-200/60 dark:border-white/5 bg-zinc-50/50 dark:bg-white/[0.02] p-3 transition-colors hover:bg-zinc-100/50 dark:hover:bg-white/[0.04]"
-          >
-            <p className="font-bold text-xs text-zinc-900 dark:text-zinc-100 mb-1.5 leading-snug">
-              {r.title}
-            </p>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-                {r.category}
-              </span>
-              <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 px-1.5 py-0.5 rounded">
-                {(r.score * 100).toFixed(0)}%
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
+const PPR_CODE = `export async function loader({ request }) {
+  const seed = liveSeed();
+  const cacheKey = new Request(new URL('/ppr-shell-user', request.url).toString());
 
-function DynamicTimestamp({ timestampPromise }: { timestampPromise: Promise<string> }) {
-  const ts = use(timestampPromise);
-  return (
-    <section className="relative overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-[#050505] p-6 shadow-sm transition-shadow hover:shadow-md h-full flex flex-col">
-      <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-bl-full -mr-4 -mt-4" />
-      <h2 className="font-bold text-sm mb-5 text-zinc-900 dark:text-zinc-100 flex items-center gap-3 relative z-10">
-        <span className="inline-flex px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase border border-rose-200/50 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400">
-          DYNAMIC HOLE
-        </span>
-        Live Edge Timestamp
-      </h2>
-      <div className="flex-1 flex flex-col justify-center items-center py-6">
-        <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 w-full text-center">
-          <code className="text-sm font-mono font-bold text-rose-600 dark:text-rose-400">{ts}</code>
-        </div>
-      </div>
-      <div className="mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800/50 relative z-10">
-        <p className="text-[10px] font-bold tracking-wider uppercase flex items-center gap-1.5 text-zinc-500">
-          <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
-          Streamed from server
-        </p>
-      </div>
-    </section>
-  );
-}
+  let shellUser = makeUser(seed);
 
-function DynamicCounter() {
-  const [count, setCount] = useState(0);
-
-  const increment = () => {
-    setCount((prev) => prev + 1);
-  };
-
-  return (
-    <section className="relative overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-[#050505] p-6 shadow-sm transition-shadow hover:shadow-md">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 rounded-bl-full -mr-8 -mt-8" />
-      <h2 className="font-bold text-sm mb-5 text-zinc-900 dark:text-zinc-100 flex items-center gap-3 relative z-10">
-        <span className="inline-flex px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase border border-rose-200/50 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400">
-          DYNAMIC HOLE
-        </span>
-        URL-Driven Counter
-      </h2>
-      <div className="flex items-center justify-between bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 relative z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center shadow-sm">
-            <span className="text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100">
-              {count}
-            </span>
-          </div>
-          <p className="text-xs font-medium text-zinc-500">Current count</p>
-        </div>
-        <button
-          type="button"
-          onClick={increment}
-          className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold transition-all shadow-sm shadow-rose-500/20"
-        >
-          Increment
-        </button>
-      </div>
-      <div className="mt-5 pt-4 border-t border-zinc-100 dark:border-zinc-800/50 relative z-10">
-        <p className="text-[10px] font-bold tracking-wider uppercase flex items-center gap-1.5 text-zinc-500">
-          <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
-          Interactive Island
-        </p>
-      </div>
-    </section>
-  );
-}
-
-const CODE = `// app/strategies/ppr.tsx
-export async function loader({ request }: Route.LoaderArgs) {
-  // 1. Check Edge Cache for static shell data
-  const cache = caches.default;
-  const cacheKey = new Request(new URL("/api/profile", request.url));
-  
-  let profile;
-  const cached = await cache.match(cacheKey);
-  
+  // Serve shell from cache instantly (~0ms)
+  const cached = await caches.default.match(cacheKey);
   if (cached) {
-    profile = await cached.json();
+    shellUser = await cached.json();
   } else {
-    profile = await fetchUserProfile(50);
-    await cache.put(cacheKey, new Response(JSON.stringify(profile), {
-      headers: { "Content-Type": "application/json", "Cache-Control": "s-maxage=3600" }
-    }));
+    await caches.default.put(cacheKey, new Response(JSON.stringify(shellUser)));
   }
 
-  // 2. Return un-awaited promises for dynamic holes
   return {
-    profile,
-    recommendationsPromise: fetchRecommendations(1500),
-    timestampPromise: new Promise(res => setTimeout(() => res(new Date().toISOString()), 800))
+    shellUser,
+    // Stream dynamic sections in the background
+    postsPromise: fetchWithDelay(makePosts(seed, 3), 800),
+    analyticsPromise: fetchWithDelay(makeAnalytics(seed), 1200),
   };
-}
-
-// 3. Render shell instantly, stream holes via Suspense
-export default function PPR({ loaderData }: Route.ComponentProps) {
-  return (
-    <>
-      <StaticProfileShell profile={loaderData.profile} />
-      <Suspense fallback={<Skeleton />}>
-        <DynamicRecs recommendationsPromise={loaderData.recommendationsPromise} />
-      </Suspense>
-    </>
-  );
 }`;

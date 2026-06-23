@@ -1,47 +1,63 @@
 import type { Route } from "./+types/benchmark";
 
-type Result = {
-  strategy: string;
-  url: string;
-  ttfb: number;
-  status: number;
-  cacheStatus: string | null;
-  error?: string;
-};
+const ROUTES = [
+  { strategy: "SSR", path: "/ssr" },
+  { strategy: "CSR", path: "/csr" },
+  { strategy: "SSG", path: "/ssg" },
+  { strategy: "Streaming", path: "/streaming" },
+  { strategy: "ISR", path: "/isr" },
+  { strategy: "PPR", path: "/ppr" },
+  { strategy: "Islands", path: "/islands" },
+  { strategy: "HTMX", path: "/htmx" },
+  { strategy: "Hybrid", path: "/hybrid" },
+  { strategy: "Edge", path: "/edge-vs-origin" },
+];
 
+// ─── Action — POST to trigger a benchmark run ────────────────────────────────
 export async function action({ request }: Route.ActionArgs) {
-  const base = new URL(request.url).origin;
-  const endpoints = [
-    { strategy: "SSR", path: "/ssr" },
-    { strategy: "CSR", path: "/csr" },
-    { strategy: "SSG", path: "/ssg" },
-    { strategy: "Streaming", path: "/streaming" },
-    { strategy: "ISR", path: "/isr" },
-    { strategy: "PPR", path: "/ppr" },
-    { strategy: "Islands", path: "/islands" },
-    { strategy: "HTMX", path: "/htmx" },
-    { strategy: "HYBRID", path: "/hybrid" },
-    { strategy: "EDGE-VS-ORIGIN", path: "/edge-vs-origin" },
-  ];
+  const origin = new URL(request.url).origin;
 
-  const results: Result[] = await Promise.all(
-    endpoints.map(async ({ strategy, path }) => {
+  const results = await Promise.all(
+    ROUTES.map(async ({ strategy, path }) => {
+      const t0 = Date.now();
       try {
-        const start = Date.now();
-        const res = await fetch(`${base}${path}`, { redirect: "follow" });
-        const ttfb = Date.now() - start;
+        const res = await fetch(`${origin}${path}`, {
+          headers: {
+            Accept: "text/html",
+            "User-Agent": "Twister-Benchmark/2.0",
+          },
+          signal: AbortSignal.timeout(5_000),
+        });
+        const ttfb = Date.now() - t0;
+        const cacheStatus =
+          res.headers.get("CF-Cache-Status") ?? res.headers.get("X-Cache-Status") ?? "DYNAMIC";
         return {
           strategy,
-          url: path,
           ttfb,
           status: res.status,
-          cacheStatus: res.headers.get("CF-Cache-Status"),
+          cached: cacheStatus === "HIT",
+          cacheStatus,
         };
-      } catch (e) {
-        return { strategy, url: path, ttfb: -1, status: 0, cacheStatus: null, error: String(e) };
+      } catch {
+        return {
+          strategy,
+          ttfb: -1,
+          status: 0,
+          cached: false,
+          cacheStatus: "ERROR",
+        };
       }
     }),
   );
 
-  return Response.json({ results, timestamp: new Date().toISOString() });
+  return {
+    results,
+    measuredAt: new Date().toISOString(),
+    origin,
+  };
+}
+
+// ─── Loader — GET is not used ────────────────────────────────────────────────
+export async function loader() {
+  return new Response("Method Not Allowed", { status: 405 });
 }

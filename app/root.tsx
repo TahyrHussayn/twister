@@ -1,67 +1,61 @@
 import {
-  isRouteErrorResponse,
   Links,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
-  useNavigation,
+  isRouteErrorResponse,
+  useRouteLoaderData,
 } from "react-router";
-
 import type { Route } from "./+types/root";
-import { Nav } from "./components/nav";
-import "./app.css";
+import { Nav } from "~/components/nav";
+import stylesheet from "~/app.css?url";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
-  {
-    rel: "preconnect",
-    href: "https://fonts.gstatic.com",
-    crossOrigin: "anonymous",
-  },
-  {
-    rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=JetBrains+Mono:wght@400;700&display=swap",
-  },
+  { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+  { rel: "stylesheet", href: stylesheet },
 ];
 
-function ProgressBar() {
-  const navigation = useNavigation();
-  const active = navigation.state !== "idle";
+export function meta() {
+  return [
+    { title: "Twister — Web Rendering Strategy Playground" },
+    {
+      name: "description",
+      content:
+        "Explore SSR, CSR, SSG, Streaming, ISR, Islands, HTMX and more — all running live on Cloudflare Workers with React Router v8.",
+    },
+    { name: "theme-color", content: "#070810" },
+  ];
+}
 
-  return (
-    <div
-      className={`fixed top-0 left-0 w-full h-[2px] z-[100] pointer-events-none transition-opacity duration-300 ${active ? "opacity-100" : "opacity-0"}`}
-    >
-      <div
-        className="h-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.5)] origin-left"
-        style={{
-          transform: "scaleX(0)",
-          animation: active
-            ? "progress-bar-loading 10s cubic-bezier(0.075, 0.82, 0.165, 1) forwards"
-            : "none",
-        }}
-      />
-    </div>
-  );
+export async function loader({ request }: Route.LoaderArgs) {
+  const cookieHeader = request.headers.get("Cookie") || "";
+  const matchLatency = cookieHeader.match(/twister_latency=(\d+)/);
+  const latency = matchLatency ? parseInt(matchLatency[1], 10) : 0;
+
+  const matchTheme = cookieHeader.match(/twister_theme=(light|dark)/);
+  const theme = matchTheme ? matchTheme[1] : "dark";
+
+  return { latency, theme };
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const data = useRouteLoaderData<typeof loader>("root");
+  const theme = data?.theme ?? "dark";
+  const latency = data?.latency ?? 0;
+
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className={theme}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Twister</title>
         <Meta />
         <Links />
       </head>
       <body>
-        <ProgressBar />
-        <div className="mesh-bg" />
-        <div className="elite-bg" />
-        <Nav />
-        {children}
+        <Nav theme={theme} latency={latency} />
+        <main>{children}</main>
         <ScrollRestoration />
         <Scripts />
       </body>
@@ -70,54 +64,43 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const navigation = useNavigation();
-  const isLoading = navigation.state === "loading";
-
-  return (
-    <main
-      className="max-w-7xl mx-auto px-4 py-8 min-h-screen"
-      style={{
-        viewTransitionName: "main-content",
-        opacity: isLoading ? 0.6 : 1,
-        transition: "opacity 0.15s ease-in-out",
-      }}
-    >
-      <Outlet />
-    </main>
-  );
+  return <Outlet />;
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Oops!";
-  let details = "An unexpected error occurred.";
-  let stack: string | undefined;
+  let title = "Something went wrong";
+  let message = "An unexpected error occurred.";
+  let status = 500;
 
   if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error";
-    details =
-      error.status === 404 ? "The requested page could not be found." : error.statusText || details;
-  } else if (import.meta.env.DEV && error && error instanceof Error) {
-    details = error.message;
-    stack = error.stack;
+    status = error.status;
+    title = `${error.status} — ${error.statusText}`;
+    message = typeof error.data === "string" ? error.data : "This page doesn't exist.";
+  } else if (error instanceof Error) {
+    message = error.message;
   }
 
   return (
-    <main className="max-w-2xl mx-auto px-4 sm:px-6 pt-24">
-      <div className="rounded-2xl border border-red-200 dark:border-red-900 bg-white dark:bg-zinc-900 p-8">
-        <h1 className="text-4xl font-bold text-red-600 dark:text-red-400 mb-4">{message}</h1>
-        <p className="text-zinc-600 dark:text-zinc-400 mb-4">{details}</p>
-        {stack && (
-          <pre className="w-full p-4 overflow-x-auto rounded-xl bg-red-50 dark:bg-red-950 text-sm font-mono">
-            <code>{stack}</code>
-          </pre>
-        )}
+    <div className="min-h-screen flex items-center justify-center px-6">
+      <div className="text-center max-w-md">
+        <div
+          className="text-7xl font-black mb-4"
+          style={{ fontFamily: "var(--font-display)", color: "#6366f1" }}
+        >
+          {status}
+        </div>
+        <h1 className="text-2xl font-bold mb-3" style={{ fontFamily: "var(--font-display)" }}>
+          {title}
+        </h1>
+        <p className="text-[var(--color-fg-dim)] mb-8 text-sm leading-relaxed">{message}</p>
         <a
           href="/"
-          className="inline-block mt-6 text-blue-600 dark:text-blue-400 hover:underline font-medium"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-80"
+          style={{ background: "#6366f1" }}
         >
-          Go back home
+          ← Back to Dashboard
         </a>
       </div>
-    </main>
+    </div>
   );
 }

@@ -1,93 +1,62 @@
 import { Link } from "react-router";
-import { STRATEGY_ACCENTS } from "~/lib/theme";
 
-export function ComparisonPanel({
-  pros,
-  cons,
-  related,
-}: {
+type ComparisonPanelProps = {
   pros: string[];
   cons: string[];
-  related: { to: string; label: string; key?: string }[];
-}) {
+  related?: { to: string; label: string; key?: string }[];
+};
+
+export function ComparisonPanel({ pros, cons, related }: ComparisonPanelProps) {
   return (
-    <div className="grid gap-6 sm:grid-cols-2">
-      {/* Pros Panel */}
-      <div className="rounded-2xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/10 p-8 shadow-sm">
-        <h3 className="font-semibold text-sm mb-5 flex items-center gap-2 text-emerald-800 dark:text-emerald-400">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-          Strengths
-        </h3>
-        <ul className="space-y-3.5">
+    <div className="grid sm:grid-cols-2 gap-4 mt-2">
+      {/* Pros */}
+      <div className="data-card p-5">
+        <p className="eyebrow mb-3" style={{ color: "#10b981" }}>
+          ✓ When it shines
+        </p>
+        <ul className="space-y-1">
           {pros.map((p) => (
-            <li
-              key={p}
-              className="flex items-start gap-3 text-sm text-emerald-900/80 dark:text-emerald-200/70"
-            >
-              <span className="text-emerald-500 font-bold mt-[-1px] text-base">+</span>
-              <span className="leading-relaxed">{p}</span>
+            <li key={p} className="pro-item">
+              <span className="pro-dot" style={{ background: "#10b981" }} />
+              <span className="text-sm text-[var(--color-fg-dim)]">{p}</span>
             </li>
           ))}
         </ul>
       </div>
 
-      {/* Cons Panel */}
-      <div className="rounded-2xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/10 p-8 shadow-sm">
-        <h3 className="font-semibold text-sm mb-5 flex items-center gap-2 text-rose-800 dark:text-rose-400">
-          <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
-          Trade-offs
-        </h3>
-        <ul className="space-y-3.5">
+      {/* Cons */}
+      <div className="data-card p-5">
+        <p className="eyebrow mb-3" style={{ color: "#f43f5e" }}>
+          ✕ Trade-offs
+        </p>
+        <ul className="space-y-1">
           {cons.map((c) => (
-            <li
-              key={c}
-              className="flex items-start gap-3 text-sm text-rose-900/80 dark:text-rose-200/70"
-            >
-              <span className="text-rose-500 font-bold mt-[-1px] text-base">-</span>
-              <span className="leading-relaxed">{c}</span>
+            <li key={c} className="pro-item">
+              <span className="pro-dot" style={{ background: "#f43f5e" }} />
+              <span className="text-sm text-[var(--color-fg-dim)]">{c}</span>
             </li>
           ))}
         </ul>
       </div>
 
-      {/* Related Strategies */}
-      <div className="sm:col-span-2 rounded-2xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-[#050505] p-8 shadow-sm">
-        <h3 className="font-semibold text-sm mb-4 text-zinc-800 dark:text-zinc-200">
-          Compare with other strategies
-        </h3>
-        <div className="flex flex-wrap gap-2.5">
-          {related.map((r) => {
-            const accent = r.key ? STRATEGY_ACCENTS[r.key] : undefined;
-            return (
+      {/* Related */}
+      {related && related.length > 0 && (
+        <div className="sm:col-span-2 data-card p-5">
+          <p className="eyebrow mb-3">Related strategies</p>
+          <div className="flex flex-wrap gap-2">
+            {related.map(({ to, label }) => (
               <Link
-                key={r.to}
-                to={r.to}
-                viewTransition
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold border border-zinc-200 dark:border-zinc-800 transition-all hover:-translate-y-0.5 hover:shadow-md"
-                style={
-                  accent
-                    ? {
-                        backgroundColor: `var(--tw-bg-opacity, ${accent.hex}10)`,
-                        borderColor: `var(--tw-border-opacity, ${accent.hex}30)`,
-                        color: accent.hex,
-                      }
-                    : {
-                        color: "var(--tw-text-opacity, rgba(113, 113, 122, 1))",
-                      }
-                }
+                key={to}
+                to={to}
+                className="tag hover:border-white/20 transition-colors no-underline"
+                style={{ textDecoration: "none" }}
               >
-                {accent && (
-                  <span
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: accent.hex }}
-                  />
-                )}
-                {r.label}
+                → {label}
               </Link>
-            );
-          })}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

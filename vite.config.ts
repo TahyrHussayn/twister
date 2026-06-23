@@ -14,6 +14,11 @@ export default defineConfig({
     rules: { "vite-plus/prefer-vite-plus-imports": "error" },
     options: { typeAware: true, typeCheck: true },
   },
+  define: {
+    // Injected at build time — used by SSG to prove data is frozen
+    __BUILD_TIME__: JSON.stringify(Date.now()),
+    __BUILD_ID__: JSON.stringify(Math.random().toString(36).slice(2, 8).toUpperCase()),
+  },
   plugins: lazyPlugins(() => [
     cloudflare({ viteEnvironment: { name: "ssr" } }),
     tailwindcss(),
